@@ -1,6 +1,7 @@
 /// Unified case communication service for cross-app communication
 /// This service is shared between fastcorr_user and fastcorr_admin apps
 
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:stacked/stacked.dart';
@@ -58,9 +59,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
         metadata: metadata,
       );
 
-      await _getCommunicationsRef(orgId, caseId)
-          .doc(messageId)
-          .set(message.toJson());
+      await _getCommunicationsRef(
+        orgId,
+        caseId,
+      ).doc(messageId).set(message.toJson());
 
       // Mark as read by sender
       await _markAsReadBy(messageId, orgId, caseId, senderId);
@@ -101,9 +103,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
         metadata: metadata,
       );
 
-      await _getCommunicationsRef(orgId, caseId)
-          .doc(messageId)
-          .set(message.toJson());
+      await _getCommunicationsRef(
+        orgId,
+        caseId,
+      ).doc(messageId).set(message.toJson());
 
       // Mark as read by sender
       await _markAsReadBy(messageId, orgId, caseId, senderId);
@@ -136,9 +139,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
         metadata: metadata,
       );
 
-      await _getCommunicationsRef(orgId, caseId)
-          .doc(messageId)
-          .set(message.toJson());
+      await _getCommunicationsRef(
+        orgId,
+        caseId,
+      ).doc(messageId).set(message.toJson());
 
       // Update case last activity
       await _updateCaseLastActivity(orgId, caseId);
@@ -168,9 +172,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
         metadata: metadata,
       );
 
-      await _getCommunicationsRef(orgId, caseId)
-          .doc(messageId)
-          .set(message.toJson());
+      await _getCommunicationsRef(
+        orgId,
+        caseId,
+      ).doc(messageId).set(message.toJson());
 
       // Update case last activity
       await _updateCaseLastActivity(orgId, caseId);
@@ -184,24 +189,40 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   }
 
   /// Get real-time stream of case messages
-  Stream<List<UnifiedCaseMessage>> getCaseMessagesStream(String orgId, String caseId) {
+  Stream<List<UnifiedCaseMessage>> getCaseMessagesStream(
+    String orgId,
+    String caseId,
+  ) {
     return _getCommunicationsRef(orgId, caseId)
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => UnifiedCaseMessage.fromJson(doc.data() as Map<String, dynamic>))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map(
+                (doc) => UnifiedCaseMessage.fromJson(
+                  doc.data() as Map<String, dynamic>,
+                ),
+              )
+              .toList(),
+        );
   }
 
   /// Get case messages (one-time fetch)
-  Future<List<UnifiedCaseMessage>> getCaseMessages(String orgId, String caseId) async {
+  Future<List<UnifiedCaseMessage>> getCaseMessages(
+    String orgId,
+    String caseId,
+  ) async {
     try {
-      final snapshot = await _getCommunicationsRef(orgId, caseId)
-          .orderBy('timestamp', descending: true)
-          .get();
+      final snapshot = await _getCommunicationsRef(
+        orgId,
+        caseId,
+      ).orderBy('timestamp', descending: true).get();
 
       return snapshot.docs
-          .map((doc) => UnifiedCaseMessage.fromJson(doc.data() as Map<String, dynamic>))
+          .map(
+            (doc) =>
+                UnifiedCaseMessage.fromJson(doc.data() as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       print('❌ Error getting case messages: $e');
@@ -210,7 +231,12 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   }
 
   /// Mark a message as read by a user
-  Future<void> markMessageAsRead(String messageId, String orgId, String caseId, String userId) async {
+  Future<void> markMessageAsRead(
+    String messageId,
+    String orgId,
+    String caseId,
+    String userId,
+  ) async {
     try {
       await _markAsReadBy(messageId, orgId, caseId, userId);
       print('✅ Message marked as read: $messageId by $userId');
@@ -221,22 +247,24 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   }
 
   /// Private method to mark message as read
-  Future<void> _markAsReadBy(String messageId, String orgId, String caseId, String userId) async {
+  Future<void> _markAsReadBy(
+    String messageId,
+    String orgId,
+    String caseId,
+    String userId,
+  ) async {
     final messageRef = _getCommunicationsRef(orgId, caseId).doc(messageId);
-    
+
     await _firestore.runTransaction((transaction) async {
       final messageDoc = await transaction.get(messageRef);
       if (!messageDoc.exists) return;
 
       final messageData = messageDoc.data() as Map<String, dynamic>;
       final readBy = List<String>.from(messageData['readBy'] ?? []);
-      
+
       if (!readBy.contains(userId)) {
         readBy.add(userId);
-        transaction.update(messageRef, {
-          'readBy': readBy,
-          'status': 'read',
-        });
+        transaction.update(messageRef, {'readBy': readBy, 'status': 'read'});
       }
     });
   }
@@ -244,9 +272,9 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   /// Update case last activity timestamp
   Future<void> _updateCaseLastActivity(String orgId, String caseId) async {
     try {
-      await _getCasesRef(orgId).doc(caseId).update({
-        'lastActivity': FieldValue.serverTimestamp(),
-      });
+      await _getCasesRef(
+        orgId,
+      ).doc(caseId).update({'lastActivity': FieldValue.serverTimestamp()});
     } catch (e) {
       print('❌ Error updating case last activity: $e');
       // Don't rethrow as this is not critical
@@ -254,16 +282,23 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   }
 
   /// Get unread message count for a user
-  Future<int> getUnreadMessageCount(String orgId, String caseId, String userId) async {
+  Future<int> getUnreadMessageCount(
+    String orgId,
+    String caseId,
+    String userId,
+  ) async {
     try {
-      final snapshot = await _getCommunicationsRef(orgId, caseId)
-          .where('readBy', arrayContains: userId)
-          .get();
+      final snapshot = await _getCommunicationsRef(
+        orgId,
+        caseId,
+      ).where('readBy', arrayContains: userId).get();
 
       final allMessages = await getCaseMessages(orgId, caseId);
       final readMessageIds = snapshot.docs.map((doc) => doc.id).toSet();
-      
-      return allMessages.where((message) => !readMessageIds.contains(message.id)).length;
+
+      return allMessages
+          .where((message) => !readMessageIds.contains(message.id))
+          .length;
     } catch (e) {
       print('❌ Error getting unread message count: $e');
       return 0;
@@ -281,10 +316,11 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   }) async {
     try {
       final attachmentId = _uuid.v4();
-      final storagePath = 'organisations/$orgId/cases/$caseId/documents/$attachmentId';
-      
+      final storagePath =
+          'organisations/$orgId/cases/$caseId/documents/$attachmentId';
+
       final ref = _storage.ref().child(storagePath);
-      final uploadTask = ref.putData(fileBytes);
+      final uploadTask = ref.putData(Uint8List.fromList(fileBytes));
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
@@ -307,7 +343,11 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   }
 
   /// Delete a message
-  Future<void> deleteMessage(String messageId, String orgId, String caseId) async {
+  Future<void> deleteMessage(
+    String messageId,
+    String orgId,
+    String caseId,
+  ) async {
     try {
       await _getCommunicationsRef(orgId, caseId).doc(messageId).delete();
       print('✅ Message deleted: $messageId');
@@ -330,7 +370,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
           .get();
 
       return snapshot.docs
-          .map((doc) => UnifiedCaseMessage.fromJson(doc.data() as Map<String, dynamic>))
+          .map(
+            (doc) =>
+                UnifiedCaseMessage.fromJson(doc.data() as Map<String, dynamic>),
+          )
           .toList();
     } catch (e) {
       print('❌ Error getting messages by type: $e');
@@ -347,9 +390,11 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     try {
       final allMessages = await getCaseMessages(orgId, caseId);
       return allMessages
-          .where((message) => 
-              message.content.toLowerCase().contains(query.toLowerCase()) ||
-              message.senderName.toLowerCase().contains(query.toLowerCase()))
+          .where(
+            (message) =>
+                message.content.toLowerCase().contains(query.toLowerCase()) ||
+                message.senderName.toLowerCase().contains(query.toLowerCase()),
+          )
           .toList();
     } catch (e) {
       print('❌ Error searching messages: $e');
@@ -358,10 +403,13 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   }
 
   /// Get message statistics for a case
-  Future<Map<String, int>> getMessageStatistics(String orgId, String caseId) async {
+  Future<Map<String, int>> getMessageStatistics(
+    String orgId,
+    String caseId,
+  ) async {
     try {
       final allMessages = await getCaseMessages(orgId, caseId);
-      
+
       final stats = <String, int>{
         'total': allMessages.length,
         'chatMessages': 0,
@@ -382,7 +430,8 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
             stats['documents'] = (stats['documents'] ?? 0) + 1;
             break;
           case UnifiedMessageType.systemNotification:
-            stats['systemNotifications'] = (stats['systemNotifications'] ?? 0) + 1;
+            stats['systemNotifications'] =
+                (stats['systemNotifications'] ?? 0) + 1;
             break;
         }
       }
@@ -390,7 +439,13 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
       return stats;
     } catch (e) {
       print('❌ Error getting message statistics: $e');
-      return {'total': 0, 'chatMessages': 0, 'systemLogs': 0, 'documents': 0, 'systemNotifications': 0};
+      return {
+        'total': 0,
+        'chatMessages': 0,
+        'systemLogs': 0,
+        'documents': 0,
+        'systemNotifications': 0,
+      };
     }
   }
 }

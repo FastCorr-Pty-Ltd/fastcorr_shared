@@ -13,8 +13,11 @@ dependencies:
   cloud_firestore: ^5.6.12
   firebase_core: ^3.15.2
   firebase_storage: ^12.4.5
+  file_picker: ^8.0.0+1
+  # share_plus: ^10.0.2
   stacked: ^3.0.0
   uuid: ^4.2.1
+  iconly: ^1.0.1
 
 dev_dependencies:
   flutter_test:

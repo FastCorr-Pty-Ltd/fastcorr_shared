@@ -340,7 +340,7 @@ class UnifiedCaseMessage {
   String get senderRoleDisplayName {
     switch (senderRole) {
       case UnifiedParticipantRole.lawyer:
-        return 'Lawyer';
+        return 'Attorney';
       case UnifiedParticipantRole.client:
         return 'Client';
       case UnifiedParticipantRole.admin:
@@ -354,6 +354,17 @@ class UnifiedCaseMessage {
       case UnifiedParticipantRole.observer:
         return 'Observer';
     }
+  }
+
+  /// Check if message has attachments
+  bool get hasAttachments => attachments.isNotEmpty;
+
+  /// Get attachment count
+  int get attachmentCount => attachments.length;
+
+  /// Get total attachment size
+  int get totalAttachmentSize {
+    return attachments.fold(0, (sum, attachment) => sum + attachment.fileSize);
   }
 
   @override
