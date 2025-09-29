@@ -215,6 +215,12 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
     notifyListeners();
   }
 
+  /// Clear selected message
+  void clearSelectedMessage() {
+    _selectedMessage = null;
+    notifyListeners();
+  }
+
   /// Navigate to previous message
   void navigateToPreviousMessage() {
     final currentIndex = currentMessageIndex;
@@ -518,24 +524,6 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
     return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  /// Format time for display (private method)
-  String _formatTime(DateTime dateTime) {
-    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
-  /// Format file size for display
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) {
-      return '$bytes B';
-    } else if (bytes < 1024 * 1024) {
-      return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    } else if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    } else {
-      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-    }
-  }
-
   /// Format date for display
   String formatDate(DateTime dateTime) {
     final now = DateTime.now();
@@ -550,6 +538,27 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
     } else {
       return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
     }
+  }
+
+  /// View a document attachment
+  void viewDocument(DocumentAttachment attachment) {
+    // This method will be overridden by the consuming app to handle navigation
+    // The consuming app should use DocumentViewHelper.navigateToDocumentView()
+    log('Viewing document: ${attachment.fileName}');
+  }
+
+  /// Download a document attachment
+  void downloadDocument(DocumentAttachment attachment) {
+    // Create a temporary UploadFileData for download
+    final uploadFileData = UploadFileData(
+      fileName: attachment.fileName,
+      fileUrl: attachment.fileUrl,
+      size: attachment.fileSize.toDouble(),
+    );
+
+    // Use the document service to download
+    final docService = DocumentService();
+    docService.downloadPdf(uploadFileData);
   }
 
   @override

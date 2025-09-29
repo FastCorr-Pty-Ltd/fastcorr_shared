@@ -17,19 +17,14 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   /// Get the communications collection reference for a specific case
   CollectionReference _getCommunicationsRef(String orgId, String caseId) {
     return _firestore
-        .collection('organisations')
-        .doc(orgId)
         .collection('cases')
         .doc(caseId)
         .collection('communications');
   }
 
-  /// Get the cases collection reference for an organization
+  /// Get the cases collection reference (top-level)
   CollectionReference _getCasesRef(String orgId) {
-    return _firestore
-        .collection('organisations')
-        .doc(orgId)
-        .collection('cases');
+    return _firestore.collection('cases');
   }
 
   /// Send a chat message
@@ -316,8 +311,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   }) async {
     try {
       final attachmentId = _uuid.v4();
-      final storagePath =
-          'organisations/$orgId/cases/$caseId/documents/$attachmentId';
+      final storagePath = 'cases/$caseId/documents/$attachmentId';
 
       final ref = _storage.ref().child(storagePath);
       final uploadTask = ref.putData(Uint8List.fromList(fileBytes));

@@ -7,11 +7,16 @@ library fastcorr_shared;
 
 // Export models
 export 'models/unified_case_message.dart';
+export 'models/upload_file_data.dart';
+export 'models/court_date_model.dart';
 
 // Export services
 export 'services/unified_case_communication_service.dart';
 export 'services/unified_status_sync_service.dart';
 export 'services/unified_case_state_sync_service.dart';
+export 'services/document_service.dart';
+export 'services/court_date_service.dart';
+export 'services/map_tracking_service.dart';
 
 // Export UI components
 export 'ui/communication/shared_communication_viewmodel.dart';
@@ -19,3 +24,17 @@ export 'ui/communication/shared_communication_widget.dart';
 export 'ui/communication/widgets/message_list_panel.dart';
 export 'ui/communication/widgets/message_detail_panel.dart';
 export 'ui/communication/widgets/compose_dialog.dart';
+
+// Export document viewer
+export 'ui/document/document_view.dart';
+export 'ui/document/document_viewmodel.dart';
+export 'ui/document/document_view_helper.dart';
+
+// Export court dates functionality
+export 'ui/court_dates/court_dates_tab.dart';
+export 'ui/court_dates/court_dates_viewmodel.dart';
+export 'ui/court_dates/add_court_date_dialog.dart';
+
+// Export map tracking functionality
+export 'ui/map_tracking/map_tracking_view.dart';
+export 'ui/map_tracking/map_tracking_viewmodel.dart';

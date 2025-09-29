@@ -2,6 +2,7 @@
 /// Gmail-like interface for case communications
 
 import 'package:flutter/material.dart';
+import 'package:iconly/iconly.dart';
 import 'package:stacked/stacked.dart';
 import 'package:fastcorr_shared/fastcorr_shared.dart';
 import 'shared_communication_viewmodel.dart';
@@ -91,7 +92,7 @@ class SharedCommunicationWidget
               viewModel: viewModel,
               colorScheme: colors,
               textTheme: textStyles,
-              onBack: () => viewModel.selectMessage(null as UnifiedCaseMessage),
+              onBack: () => viewModel.clearSelectedMessage(),
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => viewModel.startComposing(),
@@ -145,22 +146,22 @@ class SharedCommunicationWidget
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.message_outlined,
+              IconlyBroken.chat,
               size: 64,
-              color: colors.onSurface.withOpacity(0.3),
+              color: colors.onSurface.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
             Text(
               'Select a message',
               style: textStyles.titleMedium?.copyWith(
-                color: colors.onSurface.withOpacity(0.6),
+                color: colors.onSurface.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Choose a message from the list to view its content',
               style: textStyles.bodyMedium?.copyWith(
-                color: colors.onSurface.withOpacity(0.5),
+                color: colors.onSurface.withValues(alpha: 0.5),
               ),
               textAlign: TextAlign.center,
             ),

@@ -2,7 +2,6 @@
 /// Handles real-time case state synchronization between admin and user apps
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fastcorr_shared/fastcorr_shared.dart' as shared;
 
 class UnifiedCaseStateSyncService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -443,6 +442,3 @@ class UnifiedCaseStateSyncService {
     return results;
   }
 }
-
-
-
