@@ -23,14 +23,32 @@ class CourtModel {
   });
 
   factory CourtModel.fromJson(Map<String, dynamic> json) {
+    // Parse GeoPoint from Algolia format (which stores it as an object with _latitude/_longitude)
+    GeoPoint location;
+    if (json['location'] != null) {
+      if (json['location'] is GeoPoint) {
+        location = json['location'];
+      } else if (json['location'] is Map) {
+        final locMap = json['location'] as Map<String, dynamic>;
+        location = GeoPoint(
+          locMap['_latitude'] ?? locMap['latitude'] ?? 0.0,
+          locMap['_longitude'] ?? locMap['longitude'] ?? 0.0,
+        );
+      } else {
+        location = const GeoPoint(0, 0);
+      }
+    } else {
+      location = const GeoPoint(0, 0);
+    }
+
     return CourtModel(
-      courtName: json['courtName'],
-      courtLevel: json['courtLevel'],
-      courtAddress: json['courtAddress'],
-      city: json['city'],
-      province: json['province'],
-      officeId: json['fastCorrOffice'],
-      location: json['location'],
+      courtName: json['courtName'] ?? '',
+      courtLevel: json['courtLevel'] ?? '',
+      courtAddress: json['courtAddress'] ?? '',
+      city: json['city'] ?? '',
+      province: json['province'] ?? '',
+      officeId: json['fastCorrOffice'] ?? '',
+      location: location,
     );
   }
 

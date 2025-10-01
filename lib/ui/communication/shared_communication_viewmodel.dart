@@ -554,6 +554,8 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
       size: attachment.fileSize.toDouble(),
+      caseFileId: 'attachment.caseFileId',
+      litNumber: 'attachment.litNumber',
     );
 
     // Use the document service to download

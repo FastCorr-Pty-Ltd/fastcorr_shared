@@ -473,11 +473,7 @@ class DocumentView extends ViewModelWidget<DocumentViewModel> {
         statusText = 'Pending';
         statusIcon = Icons.schedule;
         break;
-      case DocStatus.processing:
-        statusColor = Colors.blue;
-        statusText = 'Processing';
-        statusIcon = Icons.sync;
-        break;
+
       case DocStatus.returned:
         statusColor = Colors.green;
         statusText = 'Returned';
@@ -836,8 +832,6 @@ class DocumentView extends ViewModelWidget<DocumentViewModel> {
     switch (status) {
       case DocStatus.pending:
         return 'Document is waiting to be processed';
-      case DocStatus.processing:
-        return 'Document is currently being processed';
       case DocStatus.returned:
         return 'Document has been returned successfully';
       case DocStatus.docOut:

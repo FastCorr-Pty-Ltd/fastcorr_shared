@@ -31,6 +31,8 @@ class CaseModel {
   // Financial tracking
   final double totalCost;
   final double paidAmount;
+  final double capitalAmount;
+  final String scale;
 
   // Event tracking
   final List<String> courtDateIds;
@@ -38,12 +40,15 @@ class CaseModel {
   final List<String> returnTaskIds;
   final List<String>? receiptIds;
   final List<String>? instructionIds;
+
   final List<String>? followupDocIds;
   CaseModel({
     this.caseNumber,
     required this.caseFileId,
     required this.caseName,
     required this.litNumber,
+    required this.capitalAmount,
+    required this.scale,
     this.description,
     required this.createdAt,
     this.lastupdatedAt,
@@ -100,6 +105,8 @@ class CaseModel {
       partyIds: safeListFromJson(json['partyIds']),
       totalCost: json['totalCost']?.toDouble() ?? 0.0,
       paidAmount: json['paidAmount']?.toDouble() ?? 0.0,
+      capitalAmount: json['capitalAmount']?.toDouble() ?? 0.0,
+      scale: json['scale'] ?? '',
       courtDateIds: safeListFromJson(json['courtDateIds']),
       requestIds: safeListFromJson(json['requestIds']),
       receiptIds: safeListFromJson(json['receiptIds']),
@@ -147,6 +154,8 @@ class CaseModel {
       partyIds: safeListFromSnapshot(snapshot['partyIds']),
       totalCost: snapshot['totalCost']?.toDouble() ?? 0.0,
       paidAmount: snapshot['paidAmount']?.toDouble() ?? 0.0,
+      capitalAmount: snapshot['capitalAmount']?.toDouble() ?? 0.0,
+      scale: snapshot['scale'] ?? '',
       courtDateIds: safeListFromSnapshot(snapshot['courtDateIds']),
       requestIds: safeListFromSnapshot(snapshot['requestIds']),
       receiptIds: safeListFromSnapshot(snapshot['receiptIds']),
@@ -191,6 +200,8 @@ class CaseModel {
       'partyIds': safeListToJson(partyIds),
       'totalCost': totalCost,
       'paidAmount': paidAmount,
+      'capitalAmount': capitalAmount,
+      'scale': scale,
       'returnTaskIds': safeListToJson(returnTaskIds),
       'instructionIds': safeListToJson(instructionIds),
       'followupDocIds': safeListToJson(followupDocIds),
@@ -223,6 +234,8 @@ class CaseModel {
     List<String>? partyIds,
     double? totalCost,
     double? paidAmount,
+    double? capitalAmount,
+    String? scale,
     List<String>? eventIds,
     List<String>? courtDateIds,
     List<String>? requestIds,
@@ -249,6 +262,8 @@ class CaseModel {
       lastupdatedAt: lastupdatedAt ?? this.lastupdatedAt,
       status: status ?? this.status,
       litNumber: litNumber ?? this.litNumber,
+      capitalAmount: capitalAmount ?? this.capitalAmount,
+      scale: scale ?? this.scale,
       returnTaskIds: returnTaskIds ?? this.returnTaskIds,
       instructionIds: instructionIds ?? this.instructionIds,
       followupDocIds: followupDocIds ?? this.followupDocIds,

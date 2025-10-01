@@ -46,6 +46,8 @@ class DocumentViewHelper {
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
       size: attachment.fileSize.toDouble(),
+      caseFileId: 'attachment.caseFileId',
+      litNumber: 'attachment.litNumber',
       // Add other fields as needed
     );
 
@@ -72,6 +74,8 @@ class DocumentViewHelper {
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
       size: attachment.fileSize.toDouble(),
+      caseFileId: 'attachment.caseFileId',
+      litNumber: 'attachment.litNumber',
       // Add other fields as needed
     );
 

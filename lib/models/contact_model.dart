@@ -7,6 +7,7 @@ enum ContactRole {
   defendant,
   plaintiffAttorney,
   defendantAttorney,
+  opposingAttorney,
   sheriff,
   legalSecretary,
   investigator,
@@ -146,6 +147,8 @@ String getPartyRoleDisplayName(ContactRole role) {
       return 'Plaintiff Attorney';
     case ContactRole.defendantAttorney:
       return 'Defendant Attorney';
+    case ContactRole.opposingAttorney:
+      return 'Opposing Attorney';
     case ContactRole.sheriff:
       return 'Sheriff';
     case ContactRole.legalSecretary:
@@ -173,6 +176,8 @@ Color getPartyRoleColor(ContactRole role) {
       return Colors.lightBlue;
     case ContactRole.defendantAttorney:
       return Colors.orange;
+    case ContactRole.opposingAttorney:
+      return Colors.green;
     case ContactRole.sheriff:
       return Colors.purple;
     case ContactRole.legalSecretary:
@@ -199,6 +204,8 @@ IconData getPartyRoleIcon(ContactRole role) {
     case ContactRole.plaintiffAttorney:
       return Icons.gavel;
     case ContactRole.defendantAttorney:
+      return Icons.balance;
+    case ContactRole.opposingAttorney:
       return Icons.balance;
     case ContactRole.sheriff:
       return Icons.security;
