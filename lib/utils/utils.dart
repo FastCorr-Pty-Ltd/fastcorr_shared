@@ -36,3 +36,10 @@ GeoPoint? processedGeoPoint(dynamic rawValue) {
 
   throw ArgumentError('Invalid type for location: ${rawValue.runtimeType}');
 }
+
+double toDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is int) return value.toDouble();
+  if (value is double) return value;
+  return double.tryParse(value.toString()) ?? 0.0;
+}

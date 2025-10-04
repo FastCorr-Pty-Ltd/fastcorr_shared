@@ -51,7 +51,7 @@ class UploadFileData {
       caseFileId: json['caseFileId'] ?? '',
       litNumber: json['litNumber'] ?? '',
       pages: json['pages'],
-      size: json['size'],
+      size: toDouble(json['size']),
       fileId: json['fileId'],
       docStatus: json['docStatus'] != null
           ? DocStatus.values.byName(json['docStatus'])
@@ -73,7 +73,7 @@ class UploadFileData {
       caseFileId: snap['caseFileId']?.toString() ?? '',
       litNumber: snap['litNumber']?.toString() ?? '',
       pages: snap['pages']?.toInt(),
-      size: snap['size']?.toDouble(),
+      size: toDouble(snap['size']),
       fileId: snap['fileId']?.toString() ?? '',
       docStatus: snap['docStatus'] != null
           ? DocStatus.values.byName(snap['docStatus']?.toString() ?? '')
