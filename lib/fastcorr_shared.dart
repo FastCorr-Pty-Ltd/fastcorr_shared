@@ -9,6 +9,14 @@ library fastcorr_shared;
 export 'models/unified_case_message.dart';
 export 'models/upload_file_data.dart';
 export 'models/court_date_model.dart';
+export 'models/case_model.dart';
+export 'models/request_model.dart';
+export 'models/contact_model.dart';
+export 'models/address_model.dart';
+export 'models/court_model.dart';
+export 'models/org_model.dart';
+export 'models/trial_model.dart';
+export 'models/timer_extension.dart';
 
 // Export services
 export 'services/unified_case_communication_service.dart';

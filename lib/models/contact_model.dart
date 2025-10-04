@@ -3,17 +3,22 @@ import 'package:fastcorr_shared/utils/utils.dart';
 import 'package:flutter/material.dart';
 
 enum ContactRole {
-  plaintiff,
-  defendant,
+  applicant,
+  applicantAttorney,
+  respondentAttorney,
+  firstDefendant,
+  secondDefendant,
+  thirdDefendant,
+  fourthDefendant,
+  firstRespondent,
+  secondRespondent,
+  thirdRespondent,
+  fourthRespondent,
   plaintiffAttorney,
   defendantAttorney,
   opposingAttorney,
   sheriff,
-  legalSecretary,
-  investigator,
-  paralegal,
-  witness,
-  prosecutor,
+  courtClerk,
   other,
 }
 
@@ -139,67 +144,97 @@ class ContactModel {
 // Helper functions
 String getPartyRoleDisplayName(ContactRole role) {
   switch (role) {
-    case ContactRole.plaintiff:
-      return 'Plaintiff';
-    case ContactRole.defendant:
-      return 'Defendant';
-    case ContactRole.plaintiffAttorney:
-      return 'Plaintiff Attorney';
+    case ContactRole.applicant:
+      return 'Applicant';
+    case ContactRole.firstDefendant:
+      return 'First Defendant';
+    case ContactRole.secondDefendant:
+      return 'Second Defendant';
+    case ContactRole.thirdDefendant:
+      return 'Third Defendant';
+    case ContactRole.fourthDefendant:
+      return 'Fourth Defendant';
     case ContactRole.defendantAttorney:
       return 'Defendant Attorney';
+    case ContactRole.firstRespondent:
+      return 'First Respondent';
+    case ContactRole.secondRespondent:
+      return 'Second Respondent';
+    case ContactRole.thirdRespondent:
+      return 'Third Respondent';
+    case ContactRole.fourthRespondent:
+      return 'Fourth Respondent';
+    case ContactRole.applicantAttorney:
+      return 'Applicant Attorney';
     case ContactRole.opposingAttorney:
       return 'Opposing Attorney';
     case ContactRole.sheriff:
       return 'Sheriff';
-    case ContactRole.legalSecretary:
-      return 'Legal Secretary';
-    case ContactRole.investigator:
-      return 'Investigator';
-    case ContactRole.paralegal:
-      return 'Paralegal';
-    case ContactRole.witness:
-      return 'Witness';
-    case ContactRole.prosecutor:
-      return 'Prosecutor';
+    case ContactRole.courtClerk:
+      return 'Court Clerk';
+
     case ContactRole.other:
       return 'Other';
+    case ContactRole.respondentAttorney:
+      return 'Respondent Attorney';
+
+    case ContactRole.plaintiffAttorney:
+      return 'Plaintiff Attorney';
   }
 }
 
 Color getPartyRoleColor(ContactRole role) {
   switch (role) {
-    case ContactRole.plaintiff:
+    case ContactRole.applicant:
       return Colors.blue;
-    case ContactRole.defendant:
+    case ContactRole.applicantAttorney:
+      return Colors.green;
+    case ContactRole.respondentAttorney:
       return Colors.red;
+    case ContactRole.firstDefendant:
+      return Colors.deepOrange;
+    case ContactRole.secondDefendant:
+      return Colors.deepOrange;
+    case ContactRole.thirdDefendant:
+      return Colors.deepOrange;
+
+    case ContactRole.fourthDefendant:
+      return Colors.deepOrange;
+
+    case ContactRole.firstRespondent:
+      return Colors.yellow;
+    case ContactRole.secondRespondent:
+      return Colors.yellow;
+    case ContactRole.thirdRespondent:
+      return Colors.yellow;
+    case ContactRole.fourthRespondent:
+      return Colors.yellow;
     case ContactRole.plaintiffAttorney:
-      return Colors.lightBlue;
+      return Colors.orange;
     case ContactRole.defendantAttorney:
       return Colors.orange;
     case ContactRole.opposingAttorney:
-      return Colors.green;
-    case ContactRole.sheriff:
-      return Colors.purple;
-    case ContactRole.legalSecretary:
       return Colors.teal;
-    case ContactRole.investigator:
-      return Colors.indigo;
-    case ContactRole.paralegal:
-      return Colors.cyan;
-    case ContactRole.witness:
-      return Colors.amber;
-    case ContactRole.prosecutor:
-      return Colors.deepPurple;
+    case ContactRole.sheriff:
+      return Colors.teal;
+    case ContactRole.courtClerk:
+      return Colors.teal;
     case ContactRole.other:
-      return Colors.grey;
+      return Colors.teal;
   }
 }
 
 IconData getPartyRoleIcon(ContactRole role) {
   switch (role) {
-    case ContactRole.plaintiff:
+    case ContactRole.applicant:
       return Icons.person;
-    case ContactRole.defendant:
+    case ContactRole.firstDefendant:
+      return Icons.person_outline;
+    case ContactRole.secondDefendant:
+      return Icons.person_outline;
+    case ContactRole.thirdDefendant:
+      return Icons.person_outline;
+    case ContactRole.fourthDefendant:
       return Icons.person_outline;
     case ContactRole.plaintiffAttorney:
       return Icons.gavel;
@@ -209,17 +244,21 @@ IconData getPartyRoleIcon(ContactRole role) {
       return Icons.balance;
     case ContactRole.sheriff:
       return Icons.security;
-    case ContactRole.legalSecretary:
+    case ContactRole.courtClerk:
       return Icons.assignment;
-    case ContactRole.investigator:
-      return Icons.search;
-    case ContactRole.paralegal:
-      return Icons.description;
-    case ContactRole.witness:
-      return Icons.visibility;
-    case ContactRole.prosecutor:
-      return Icons.gavel;
+    case ContactRole.firstRespondent:
+      return Icons.person_outline;
+    case ContactRole.secondRespondent:
+    case ContactRole.thirdRespondent:
+      return Icons.person_outline;
+    case ContactRole.fourthRespondent:
+      return Icons.person_outline;
+
     case ContactRole.other:
       return Icons.person_add;
+    case ContactRole.applicantAttorney:
+      return Icons.gavel;
+    case ContactRole.respondentAttorney:
+      return Icons.balance;
   }
 }

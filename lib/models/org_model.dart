@@ -24,7 +24,7 @@ class OrgModel {
     return OrgModel(
       regNumber: json['regNumber'] as String,
       name: json['name'] as String,
-      address: json['address'],
+      address: json['address'] ?? '',
       logoUrl: json['logoUrl'],
       credits: json['credits']?.toDouble(),
       location: processedGeoPoint(json['location']),
@@ -36,11 +36,11 @@ class OrgModel {
     return OrgModel(
       regNumber: snap.id,
       name: snap['regNumber'] as String,
-      address: snap['address'],
-      location: snap['location'],
+      address: snap['address'] ?? '',
+      location: processedGeoPoint(snap['location']),
       logoUrl: snap['logoUrl'],
       credits: snap['credits']?.toDouble(),
-      createdAt: snap['createdAt'] as Timestamp,
+      createdAt: processedTimestamp(snap['createdAt'])!,
     );
   }
 
@@ -51,9 +51,7 @@ class OrgModel {
       'address': address,
       'logoUrl': logoUrl,
       'credits': credits,
-      // Convert the Timestamp to a JSON-friendly ISO 8601 string
-      'createdAt': createdAt.toDate().toIso8601String(),
-      // Convert the GeoPoint object to a simple Map
+      'createdAt': createdAt,
       'location': location != null
           ? {'latitude': location!.latitude, 'longitude': location!.longitude}
           : null,
