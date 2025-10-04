@@ -1,8 +1,8 @@
 name: fastcorr_shared
 description: "Shared models and services for FastCorr apps"
 version: 1.0.0+1
-homepage: https://github.com/your-username/fastcorr_shared
-repository: https://github.com/your-username/fastcorr_shared
+homepage: https://github.com/FastCorr/fastcorr_shared
+repository: https://github.com/FastCorr/fastcorr_shared
 
 environment:
   sdk: ^3.9.0
