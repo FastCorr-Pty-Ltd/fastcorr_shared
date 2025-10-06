@@ -4,7 +4,14 @@ import 'package:flutter/material.dart';
 
 enum Priority { urgent, standard }
 
-enum ActionType { serve, serveAndFile, issue, issueAndServe, other }
+enum ActionType {
+  serve,
+  serveAndFile,
+  issue,
+  issueAndServe,
+  courtAppearance,
+  other,
+}
 
 enum Status {
   pending,
