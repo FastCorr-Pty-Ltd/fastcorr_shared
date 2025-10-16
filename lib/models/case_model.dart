@@ -29,9 +29,9 @@ class CaseModel {
   final String? opposingAttorneyName;
 
   // Financial tracking
-  final double totalCost;
-  final double paidAmount;
-  final double capitalAmount;
+  final int totalCost;
+  final int paidAmount;
+  final int capitalAmount;
   final String scale;
 
   // Event tracking
@@ -57,8 +57,8 @@ class CaseModel {
     this.courtId,
     this.caseType,
     this.partyIds = const [],
-    this.totalCost = 0.0,
-    this.paidAmount = 0.0,
+    this.totalCost = 0,
+    this.paidAmount = 0,
     this.courtDateIds = const [],
     this.requestIds = const [],
     this.returnTaskIds = const [],
@@ -103,9 +103,9 @@ class CaseModel {
       courtId: json['courtId'] ?? '',
       caseType: json['caseType'] ?? '',
       partyIds: safeListFromJson(json['partyIds']),
-      totalCost: json['totalCost']?.toDouble() ?? 0.0,
-      paidAmount: json['paidAmount']?.toDouble() ?? 0.0,
-      capitalAmount: json['capitalAmount']?.toDouble() ?? 0.0,
+      totalCost: json['totalCost']?.toInt() ?? 0,
+      paidAmount: json['paidAmount']?.toInt() ?? 0,
+      capitalAmount: json['capitalAmount']?.toInt() ?? 0,
       scale: json['scale'] ?? '',
       courtDateIds: safeListFromJson(json['courtDateIds']),
       requestIds: safeListFromJson(json['requestIds']),
@@ -152,9 +152,9 @@ class CaseModel {
       courtId: snapshot['courtId'] ?? '',
       caseType: snapshot['caseType'] ?? '',
       partyIds: safeListFromSnapshot(snapshot['partyIds']),
-      totalCost: snapshot['totalCost']?.toDouble() ?? 0.0,
-      paidAmount: snapshot['paidAmount']?.toDouble() ?? 0.0,
-      capitalAmount: snapshot['capitalAmount']?.toDouble() ?? 0.0,
+      totalCost: snapshot['totalCost']?.toInt() ?? 0,
+      paidAmount: snapshot['paidAmount']?.toInt() ?? 0,
+      capitalAmount: snapshot['capitalAmount']?.toInt() ?? 0,
       scale: snapshot['scale'] ?? '',
       courtDateIds: safeListFromSnapshot(snapshot['courtDateIds']),
       requestIds: safeListFromSnapshot(snapshot['requestIds']),
@@ -232,9 +232,9 @@ class CaseModel {
     String? courtId,
     String? caseType,
     List<String>? partyIds,
-    double? totalCost,
-    double? paidAmount,
-    double? capitalAmount,
+    int? totalCost,
+    int? paidAmount,
+    int? capitalAmount,
     String? scale,
     List<String>? eventIds,
     List<String>? courtDateIds,
@@ -288,7 +288,7 @@ class CaseModel {
   }
 
   // Helper getters
-  double get outstandingAmount => totalCost - paidAmount;
+  int get outstandingAmount => totalCost - paidAmount;
   bool get isActive => status == CaseStatus.active;
   bool get isClosed => status == CaseStatus.closed;
 

@@ -1,14 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/utils/utils.dart';
 
+enum PaymentSystem { invoice, credits }
+
 class OrgModel {
   final String regNumber;
   final String name;
+  final PaymentSystem paymentSystem;
   final String address;
   final GeoPoint? location;
   final String? logoUrl;
   final Timestamp createdAt;
-  final double? credits;
+  final int? credits;
 
   OrgModel({
     required this.regNumber,
@@ -17,6 +20,7 @@ class OrgModel {
     this.logoUrl,
     this.location,
     this.credits,
+    this.paymentSystem = PaymentSystem.credits,
     required this.createdAt,
   });
 
@@ -26,9 +30,12 @@ class OrgModel {
       name: json['name'] as String,
       address: json['address'] ?? '',
       logoUrl: json['logoUrl'],
-      credits: json['credits']?.toDouble(),
+      credits: json['credits']?.toInt(),
       location: processedGeoPoint(json['location']),
       createdAt: processedTimestamp(json['createdAt'])!,
+      paymentSystem: PaymentSystem.values.byName(
+        json['paymentSystem'] ?? 'credits',
+      ),
     );
   }
 
@@ -39,8 +46,11 @@ class OrgModel {
       address: snap['address'] ?? '',
       location: processedGeoPoint(snap['location']),
       logoUrl: snap['logoUrl'],
-      credits: snap['credits']?.toDouble(),
+      credits: snap['credits']?.toInt(),
       createdAt: processedTimestamp(snap['createdAt'])!,
+      paymentSystem: PaymentSystem.values.byName(
+        snap['paymentSystem'] ?? 'credits',
+      ),
     );
   }
 
@@ -55,6 +65,7 @@ class OrgModel {
       'location': location != null
           ? {'latitude': location!.latitude, 'longitude': location!.longitude}
           : null,
+      'paymentSystem': paymentSystem.name,
     };
   }
 
@@ -64,8 +75,9 @@ class OrgModel {
     String? address,
     String? logoUrl,
     GeoPoint? location,
-    double? credits,
+    int? credits,
     Timestamp? createdAt,
+    PaymentSystem? paymentSystem,
   }) {
     return OrgModel(
       regNumber: regNumber ?? this.regNumber,
@@ -75,6 +87,7 @@ class OrgModel {
       credits: credits ?? this.credits,
       location: location ?? this.location,
       createdAt: createdAt ?? this.createdAt,
+      paymentSystem: paymentSystem ?? this.paymentSystem,
     );
   }
 }
