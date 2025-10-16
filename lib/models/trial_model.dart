@@ -21,7 +21,7 @@ class TrialModel {
   final TrialStatus status;
   final Timestamp trialDate;
   final String? trialOutcome;
-  final double capitalAmount;
+  final int capitalAmount;
   final String opposingAttorney;
   final String opposingAttorneyId;
   final String? counselBriefId;
@@ -142,7 +142,7 @@ class TrialModel {
     TrialStatus? status,
     Timestamp? trialDate,
     String? trialOutcome,
-    double? capitalAmount,
+    int? capitalAmount,
     String? opposingAttorney,
     String? opposingAttorneyId,
     String? counselBriefId,
