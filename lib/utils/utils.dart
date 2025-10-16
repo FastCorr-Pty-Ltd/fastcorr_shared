@@ -43,3 +43,36 @@ double toDouble(dynamic value) {
   if (value is double) return value;
   return double.tryParse(value.toString()) ?? 0.0;
 }
+
+// Helper function to safely parse lists from JSON
+List<String> safeListFromJson(dynamic jsonList) {
+  if (jsonList == null) return [];
+  if (jsonList is! List) return [];
+
+  return jsonList
+      .where((item) => item != null)
+      .map((item) => item.toString())
+      .where((item) => item.isNotEmpty)
+      .toList();
+}
+
+// Helper function to safely parse lists from snapshot
+List<String> safeListFromSnapshot(dynamic snapshotList) {
+  if (snapshotList == null) return [];
+  if (snapshotList is! List) return [];
+
+  return snapshotList
+      .where((item) => item != null)
+      .map((item) => item.toString())
+      .where((item) => item.isNotEmpty)
+      .toList();
+}
+
+// Helper function to safely convert lists to JSON arrays
+List<String> safeListToJson(List<String>? list) {
+  if (list == null) return [];
+  return list
+      .where((item) => item.isNotEmpty)
+      .map((item) => item.toString())
+      .toList();
+}
