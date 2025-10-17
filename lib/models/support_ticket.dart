@@ -55,10 +55,16 @@ class SupportTicket {
       clientId: snap['clientId'] ?? '',
       title: snap['title'] ?? '',
       description: snap['description'] ?? '',
-      type: IssueType.values.byName(snap['type']),
-      priority: IssuePriority.values.byName(snap['priority']),
-      status: IssueStatus.values.byName(snap['status']),
-      assignedRole: HandlerRole.values.byName(snap['assignedRole']),
+      type: IssueType.values.byName(snap['type'] ?? IssueType.other.name),
+      priority: IssuePriority.values.byName(
+        snap['priority'] ?? IssuePriority.medium.name,
+      ),
+      status: IssueStatus.values.byName(
+        snap['status'] ?? IssueStatus.open.name,
+      ),
+      assignedRole: snap['assignedRole'] != null
+          ? HandlerRole.values.byName(snap['assignedRole'])
+          : null,
       assignedStaffName: snap['assignedStaffName'] ?? '',
       assignedStaffId: snap['assignedStaffId'] ?? '',
       updatedAt: processedTimestamp(snap['updatedAt']),
@@ -73,10 +79,16 @@ class SupportTicket {
       clientId: json['clientId'] ?? '',
       title: json['title'] ?? '',
       description: json['description'] ?? '',
-      type: IssueType.values.byName(json['type']),
-      priority: IssuePriority.values.byName(json['priority']),
-      status: IssueStatus.values.byName(json['status']),
-      assignedRole: HandlerRole.values.byName(json['assignedRole']),
+      type: IssueType.values.byName(json['type'] ?? IssueType.other.name),
+      priority: IssuePriority.values.byName(
+        json['priority'] ?? IssuePriority.medium.name,
+      ),
+      status: IssueStatus.values.byName(
+        json['status'] ?? IssueStatus.open.name,
+      ),
+      assignedRole: json['assignedRole'] != null
+          ? HandlerRole.values.byName(json['assignedRole'])
+          : null,
       assignedStaffName: json['assignedStaffName'] ?? '',
       assignedStaffId: json['assignedStaffId'] ?? '',
       updatedAt: processedTimestamp(json['updatedAt']),

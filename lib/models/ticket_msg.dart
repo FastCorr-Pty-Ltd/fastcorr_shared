@@ -21,7 +21,9 @@ class TicketMsg {
   factory TicketMsg.fromSnapshot(DocumentSnapshot snap) {
     return TicketMsg(
       senderId: snap['senderId'] ?? '',
-      senderRole: TicketSenderRole.values.byName(snap['senderRole']),
+      senderRole: TicketSenderRole.values.byName(
+        snap['senderRole'] ?? TicketSenderRole.client.name,
+      ),
       message: snap['message'] ?? '',
       sentAt: processedTimestamp(snap['sentAt'])!,
       attachments: safeListFromSnapshot(snap['attachments']),
@@ -31,7 +33,9 @@ class TicketMsg {
   factory TicketMsg.fromJson(Map<String, dynamic> json) {
     return TicketMsg(
       senderId: json['senderId'] ?? '',
-      senderRole: TicketSenderRole.values.byName(json['senderRole']),
+      senderRole: TicketSenderRole.values.byName(
+        json['senderRole'] ?? TicketSenderRole.client.name,
+      ),
       message: json['message'] ?? '',
       sentAt: processedTimestamp(json['sentAt'])!,
       attachments: safeListFromJson(json['attachments']),
