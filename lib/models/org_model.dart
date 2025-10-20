@@ -48,7 +48,7 @@ class OrgModel {
   factory OrgModel.fromSnapshot(DocumentSnapshot snap) {
     return OrgModel(
       regNumber: snap.id,
-      name: snap['regNumber'] as String,
+      name: snap['name'] as String,
       address: snap['address'] ?? '',
       adminName: snap['adminName'] as String,
       adminId: snap['adminId'] as String,
