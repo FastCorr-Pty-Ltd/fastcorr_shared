@@ -6,6 +6,8 @@ enum PaymentSystem { invoice, credits }
 class OrgModel {
   final String regNumber;
   final String name;
+  final String adminName;
+  final String adminId;
   final PaymentSystem paymentSystem;
   final String address;
   final GeoPoint? location;
@@ -22,6 +24,8 @@ class OrgModel {
     this.credits,
     this.paymentSystem = PaymentSystem.credits,
     required this.createdAt,
+    required this.adminName,
+    required this.adminId,
   });
 
   factory OrgModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +35,8 @@ class OrgModel {
       address: json['address'] ?? '',
       logoUrl: json['logoUrl'],
       credits: json['credits']?.toInt(),
+      adminName: json['adminName'] as String,
+      adminId: json['adminId'] as String,
       location: processedGeoPoint(json['location']),
       createdAt: processedTimestamp(json['createdAt'])!,
       paymentSystem: PaymentSystem.values.byName(
@@ -44,6 +50,8 @@ class OrgModel {
       regNumber: snap.id,
       name: snap['regNumber'] as String,
       address: snap['address'] ?? '',
+      adminName: snap['adminName'] as String,
+      adminId: snap['adminId'] as String,
       location: processedGeoPoint(snap['location']),
       logoUrl: snap['logoUrl'],
       credits: snap['credits']?.toInt(),
@@ -62,6 +70,8 @@ class OrgModel {
       'logoUrl': logoUrl,
       'credits': credits,
       'createdAt': createdAt,
+      'adminName': adminName,
+      'adminId': adminId,
       'location': location != null
           ? {'latitude': location!.latitude, 'longitude': location!.longitude}
           : null,
@@ -74,6 +84,8 @@ class OrgModel {
     String? name,
     String? address,
     String? logoUrl,
+    String? adminName,
+    String? adminId,
     GeoPoint? location,
     int? credits,
     Timestamp? createdAt,
@@ -85,6 +97,8 @@ class OrgModel {
       address: address ?? this.address,
       logoUrl: logoUrl ?? this.logoUrl,
       credits: credits ?? this.credits,
+      adminName: adminName ?? this.adminName,
+      adminId: adminId ?? this.adminId,
       location: location ?? this.location,
       createdAt: createdAt ?? this.createdAt,
       paymentSystem: paymentSystem ?? this.paymentSystem,
