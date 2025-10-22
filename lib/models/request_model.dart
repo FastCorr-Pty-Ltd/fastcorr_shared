@@ -91,10 +91,10 @@ class RequestModel {
   final OrderType? orderType;
   final ActionType actionType;
 
-  /// Financial information
+  /// Financial information (stored as cents/minor value)
   final String? transactionRef;
-  final double? cost;
-  final double? driverFare;
+  final int? cost;
+  final int? driverFare;
   final bool? selfService;
   final String? receiptId;
 
@@ -196,8 +196,8 @@ class RequestModel {
       phase: json['phase'],
       // Financial information
       transactionRef: json['transactionRef']?.toString(),
-      cost: json['cost']?.toDouble(),
-      driverFare: json['driverFare']?.toDouble(),
+      cost: json['cost']?.toInt(),
+      driverFare: json['driverFare']?.toInt(),
       selfService: json['selfService'] as bool? ?? false,
 
       // Status tracking timestamps
@@ -256,8 +256,8 @@ class RequestModel {
       actionType: _parseActionType(snap['actionType']),
       // Financial information
       transactionRef: snap['transactionRef']?.toString(),
-      cost: snap['cost']?.toDouble(),
-      driverFare: snap['driverFare']?.toDouble(),
+      cost: snap['cost']?.toInt(),
+      driverFare: snap['driverFare']?.toInt(),
       selfService: snap['selfService'] as bool? ?? false,
 
       // Status tracking timestamps
@@ -381,8 +381,8 @@ class RequestModel {
     TaskType? type,
     OrderType? orderType,
     String? transactionRef,
-    double? cost,
-    double? driverFare,
+    int? cost,
+    int? driverFare,
     bool? selfService,
     DateTime? readyForPickupAt,
     DateTime? assignedAt,

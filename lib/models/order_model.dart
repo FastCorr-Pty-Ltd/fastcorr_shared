@@ -59,9 +59,9 @@ class OrderModel {
   final String? driverId, assigneeId;
   final bool selfService;
 
-  /// Financial information
-  final double cost;
-  final double driverFare;
+  /// Financial information (stored as cents/minor value)
+  final int cost;
+  final int driverFare;
   final String? transactionRef;
   final String? receiptId;
 
@@ -126,8 +126,8 @@ class OrderModel {
     pickedupAt: _parseTimestamp(snap['pickedupAt']),
     acceptedAt: _parseTimestamp(snap['acceptedAt']),
     arrivedAtPickupAt: _parseTimestamp(snap['arrivedAtPickupAt']),
-    cost: snap['cost']?.toDouble() ?? 0,
-    driverFare: snap['driverFare']?.toDouble() ?? 0,
+    cost: snap['cost']?.toInt() ?? 0,
+    driverFare: snap['driverFare']?.toInt() ?? 0,
     transactionRef: snap['transactionRef'] ?? '',
     receiptId: snap['receiptId'] ?? '',
     selfService: snap['selfService'] ?? false,
@@ -158,8 +158,8 @@ class OrderModel {
     pickedupAt: _parseTimestamp(json['pickedupAt']),
     acceptedAt: _parseTimestamp(json['acceptedAt']),
     arrivedAtPickupAt: _parseTimestamp(json['arrivedAtPickupAt']),
-    cost: json['cost']?.toDouble() ?? 0,
-    driverFare: json['driverFare']?.toDouble() ?? 0,
+    cost: json['cost']?.toInt() ?? 0,
+    driverFare: json['driverFare']?.toInt() ?? 0,
     transactionRef: json['transactionRef'] ?? '',
     receiptId: json['receiptId'] ?? '',
     selfService: json['selfService'] ?? false,
@@ -221,8 +221,8 @@ class OrderModel {
     DateTime? pickedupAt,
     DateTime? acceptedAt,
     DateTime? arrivedAtPickupAt,
-    double? cost,
-    double? driverFare,
+    int? cost,
+    int? driverFare,
     OrderStatus? status,
     String? transactionRef,
     String? receiptId,
