@@ -26,6 +26,7 @@ class SupportTicket {
   final IssuePriority priority;
   final IssueStatus status;
   final HandlerRole? assignedRole;
+  final String? officeId;
   final String? assignedStaffName;
   final String? assignedStaffId;
   final Timestamp createdAt;
@@ -41,6 +42,7 @@ class SupportTicket {
     this.priority = IssuePriority.medium,
     this.status = IssueStatus.open,
     this.assignedRole,
+    this.officeId,
     this.assignedStaffName,
     this.assignedStaffId,
     required this.createdAt,
@@ -65,6 +67,7 @@ class SupportTicket {
       assignedRole: snap['assignedRole'] != null
           ? HandlerRole.values.byName(snap['assignedRole'])
           : null,
+      officeId: snap['officeId'] ?? '',
       assignedStaffName: snap['assignedStaffName'] ?? '',
       assignedStaffId: snap['assignedStaffId'] ?? '',
       updatedAt: processedTimestamp(snap['updatedAt']),
@@ -89,6 +92,7 @@ class SupportTicket {
       assignedRole: json['assignedRole'] != null
           ? HandlerRole.values.byName(json['assignedRole'])
           : null,
+      officeId: json['officeId'] ?? '',
       assignedStaffName: json['assignedStaffName'] ?? '',
       assignedStaffId: json['assignedStaffId'] ?? '',
       updatedAt: processedTimestamp(json['updatedAt']),
@@ -107,6 +111,7 @@ class SupportTicket {
       'priority': priority.name,
       'status': status.name,
       'assignedRole': assignedRole?.name,
+      'officeId': officeId,
       'assignedStaffName': assignedStaffName,
       'assignedStaffId': assignedStaffId,
       'updatedAt': updatedAt,
@@ -123,6 +128,7 @@ class SupportTicket {
     IssuePriority? priority,
     IssueStatus? status,
     HandlerRole? assignedRole,
+    String? officeId,
     String? assignedStaffName,
     String? assignedStaffId,
     Timestamp? createdAt,
@@ -138,6 +144,7 @@ class SupportTicket {
       priority: priority ?? this.priority,
       status: status ?? this.status,
       assignedRole: assignedRole ?? this.assignedRole,
+      officeId: officeId ?? this.officeId,
       assignedStaffName: assignedStaffName ?? this.assignedStaffName,
       assignedStaffId: assignedStaffId ?? this.assignedStaffId,
       createdAt: createdAt ?? this.createdAt,

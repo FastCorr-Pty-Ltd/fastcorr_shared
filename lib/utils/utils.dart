@@ -15,6 +15,20 @@ Timestamp? processedTimestamp(dynamic rawValue) {
     return Timestamp.fromDate(DateTime.parse(rawValue));
   }
 
+  /// Handle Firestore Web timestamps (JavaScript objects)
+  /// These come as objects with seconds and nanoseconds properties
+  try {
+    // Try to extract seconds and nanoseconds for web compatibility
+    final timestamp = rawValue as dynamic;
+    if (timestamp.seconds != null) {
+      final seconds = timestamp.seconds as int;
+      final nanoseconds = (timestamp.nanoseconds ?? 0) as int;
+      return Timestamp(seconds, nanoseconds);
+    }
+  } catch (e) {
+    // If extraction fails, fall through to error
+  }
+
   throw ArgumentError('Invalid type for createdAt: ${rawValue.runtimeType}');
 }
 
