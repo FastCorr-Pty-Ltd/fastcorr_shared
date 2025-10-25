@@ -9,7 +9,7 @@ class UploadFileData {
   final String caseFileId, litNumber;
   final int? pages;
   final double? size;
-  final String? fileId;
+  final String fileId;
   final DocStatus? docStatus;
   final Timestamp? takenAt, returnedAt;
 
@@ -22,7 +22,7 @@ class UploadFileData {
     this.barcodeUrl,
     this.size,
     this.docStatus,
-    this.fileId,
+    required this.fileId,
     this.takenAt,
     this.returnedAt,
   });
@@ -52,7 +52,7 @@ class UploadFileData {
       litNumber: json['litNumber'] ?? '',
       pages: json['pages'],
       size: toDouble(json['size']),
-      fileId: json['fileId'],
+      fileId: json['fileId'] ?? '',
       docStatus: json['docStatus'] != null
           ? DocStatus.values.byName(json['docStatus'])
           : null,
@@ -74,7 +74,7 @@ class UploadFileData {
       litNumber: snap['litNumber']?.toString() ?? '',
       pages: snap['pages']?.toInt(),
       size: toDouble(snap['size']),
-      fileId: snap['fileId']?.toString() ?? '',
+      fileId: snap['fileId'] ?? '',
       docStatus: snap['docStatus'] != null
           ? DocStatus.values.byName(snap['docStatus']?.toString() ?? '')
           : null,
