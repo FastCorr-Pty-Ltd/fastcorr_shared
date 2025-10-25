@@ -13,3 +13,4 @@ export 'chat_msg_model.dart';
 export 'order_model.dart';
 export 'ticket_msg.dart';
 export 'support_ticket.dart';
+export 'qr_model.dart';
