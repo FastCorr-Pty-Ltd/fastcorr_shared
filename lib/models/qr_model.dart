@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/utils/utils.dart';
 
-enum QrAction { pickedUp, delivered, returned }
+enum QrAction { pending, pickedUp, delivered, returned }
 
 class QrModel {
   final String fileId;
