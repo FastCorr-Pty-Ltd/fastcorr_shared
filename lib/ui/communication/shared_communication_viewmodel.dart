@@ -551,6 +551,7 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
   void downloadDocument(DocumentAttachment attachment) {
     // Create a temporary UploadFileData for download
     final uploadFileData = UploadFileData(
+      fileId: const Uuid().v4(),
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
       size: attachment.fileSize.toDouble(),

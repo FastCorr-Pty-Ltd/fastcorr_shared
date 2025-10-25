@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:fastcorr_shared/fastcorr_shared.dart';
 import 'package:stacked/stacked.dart';
+import 'package:uuid/uuid.dart';
 
 class DocumentViewHelper {
   /// Debug document attachment information
@@ -43,6 +44,7 @@ class DocumentViewHelper {
     }
     // Convert DocumentAttachment to UploadFileData
     final uploadFileData = UploadFileData(
+      fileId: const Uuid().v4(),
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
       size: attachment.fileSize.toDouble(),
@@ -71,6 +73,7 @@ class DocumentViewHelper {
   ) {
     // Convert DocumentAttachment to UploadFileData
     final uploadFileData = UploadFileData(
+      fileId: const Uuid().v4(),
       fileName: attachment.fileName,
       fileUrl: attachment.fileUrl,
       size: attachment.fileSize.toDouble(),
