@@ -5,6 +5,8 @@ enum QrAction { pending, pickedUp, delivered, returned }
 
 class QrModel {
   final String fileId;
+  final String? returnedFileId;
+  final String? qrUrl;
   final String fileName;
   final QrAction? action;
   final String orderId, litNumber, serviceName;
@@ -20,6 +22,8 @@ class QrModel {
     required this.litNumber,
     required this.serviceName,
     required this.uploadedAt,
+    this.qrUrl,
+    this.returnedFileId,
     this.action,
     this.pickedUpAt,
     this.deliveredAt,
@@ -30,6 +34,8 @@ class QrModel {
   Map<String, dynamic> toJson() {
     return {
       'fileId': fileId,
+      'returnedFileId': returnedFileId,
+      'qrUrl': qrUrl,
       'fileName': fileName,
       'orderId': orderId,
       'litNumber': litNumber,
@@ -46,6 +52,8 @@ class QrModel {
   factory QrModel.fromJson(Map<String, dynamic> json) {
     return QrModel(
       fileId: json['fileId'],
+      returnedFileId: json['returnedFileId'],
+      qrUrl: json['qrUrl'],
       fileName: json['fileName'],
       orderId: json['orderId'],
       litNumber: json['litNumber'],
@@ -64,6 +72,8 @@ class QrModel {
   factory QrModel.fromSnapshot(DocumentSnapshot snap) {
     return QrModel(
       fileId: snap['fileId'],
+      returnedFileId: snap['returnedFileId'],
+      qrUrl: snap['qrUrl'],
       fileName: snap['fileName'],
       orderId: snap['orderId'],
       litNumber: snap['litNumber'],
