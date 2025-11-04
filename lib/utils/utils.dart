@@ -1,5 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// Helper function to handle 'N/A' or empty strings as null
+String? cleanString(dynamic value) {
+  if (value == null) return null;
+  final String str = value.toString().trim();
+  if (str.isEmpty || str.toUpperCase() == 'N/A' || str.toUpperCase() == 'TBC') {
+    return null;
+  }
+  return str;
+}
+
 Timestamp? processedTimestamp(dynamic rawValue) {
   if (rawValue == null) {
     return null;
