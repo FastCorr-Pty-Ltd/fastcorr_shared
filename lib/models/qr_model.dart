@@ -72,8 +72,6 @@ class QrModel {
   factory QrModel.fromSnapshot(DocumentSnapshot snap) {
     return QrModel(
       fileId: snap['fileId'],
-      returnedFileId: snap['returnedFileId'],
-      qrUrl: snap['qrUrl'],
       fileName: snap['fileName'],
       orderId: snap['orderId'],
       litNumber: snap['litNumber'],

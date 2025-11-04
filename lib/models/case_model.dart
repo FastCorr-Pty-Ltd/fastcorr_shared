@@ -88,6 +88,35 @@ class CaseModel {
           .toList();
     }
 
+    // Helper function to safely convert to int, handling Infinity and NaN
+    int safeToInt(dynamic value, {int defaultValue = 0}) {
+      if (value == null) return defaultValue;
+
+      // Handle numeric types
+      if (value is int) return value;
+      if (value is double) {
+        // Check for Infinity or NaN
+        if (value.isInfinite || value.isNaN) {
+          return defaultValue;
+        }
+        return value.toInt();
+      }
+
+      // Try parsing string
+      if (value is String) {
+        final parsed = int.tryParse(value);
+        if (parsed != null) return parsed;
+        final parsedDouble = double.tryParse(value);
+        if (parsedDouble != null &&
+            !parsedDouble.isInfinite &&
+            !parsedDouble.isNaN) {
+          return parsedDouble.toInt();
+        }
+      }
+
+      return defaultValue;
+    }
+
     return CaseModel(
       caseFileId: json['caseFileId'] ?? '',
       caseNumber: json['caseNumber'] ?? '',
@@ -103,9 +132,9 @@ class CaseModel {
       courtId: json['courtId'] ?? '',
       caseType: json['caseType'] ?? '',
       partyIds: safeListFromJson(json['partyIds']),
-      totalCost: json['totalCost']?.toInt() ?? 0,
-      paidAmount: json['paidAmount']?.toInt() ?? 0,
-      capitalAmount: json['capitalAmount']?.toInt() ?? 0,
+      totalCost: safeToInt(json['totalCost']),
+      paidAmount: safeToInt(json['paidAmount']),
+      capitalAmount: safeToInt(json['capitalAmount']),
       scale: json['scale'] ?? '',
       courtDateIds: safeListFromJson(json['courtDateIds']),
       requestIds: safeListFromJson(json['requestIds']),
@@ -118,7 +147,7 @@ class CaseModel {
       officeId: json['officeId'] ?? '',
       correspondentId: json['correspondentId'] ?? '',
       lawyerId: json['lawyerId'] ?? '',
-      phase: json['phase']?.toInt() ?? 1, // Default to phase 1 if not specified
+      phase: safeToInt(json['phase'], defaultValue: 1),
       opposingAttorneyId: json['opposingAttorneyId'] ?? '',
       opposingAttorneyName: json['opposingAttorneyName'] ?? '',
     );
@@ -137,6 +166,35 @@ class CaseModel {
           .toList();
     }
 
+    // Helper function to safely convert to int, handling Infinity and NaN
+    int safeToInt(dynamic value, {int defaultValue = 0}) {
+      if (value == null) return defaultValue;
+
+      // Handle numeric types
+      if (value is int) return value;
+      if (value is double) {
+        // Check for Infinity or NaN
+        if (value.isInfinite || value.isNaN) {
+          return defaultValue;
+        }
+        return value.toInt();
+      }
+
+      // Try parsing string
+      if (value is String) {
+        final parsed = int.tryParse(value);
+        if (parsed != null) return parsed;
+        final parsedDouble = double.tryParse(value);
+        if (parsedDouble != null &&
+            !parsedDouble.isInfinite &&
+            !parsedDouble.isNaN) {
+          return parsedDouble.toInt();
+        }
+      }
+
+      return defaultValue;
+    }
+
     return CaseModel(
       caseFileId: snapshot.id,
       caseNumber: snapshot['caseNumber'] ?? '',
@@ -152,9 +210,9 @@ class CaseModel {
       courtId: snapshot['courtId'] ?? '',
       caseType: snapshot['caseType'] ?? '',
       partyIds: safeListFromSnapshot(snapshot['partyIds']),
-      totalCost: snapshot['totalCost']?.toInt() ?? 0,
-      paidAmount: snapshot['paidAmount']?.toInt() ?? 0,
-      capitalAmount: snapshot['capitalAmount']?.toInt() ?? 0,
+      totalCost: safeToInt(snapshot['totalCost']),
+      paidAmount: safeToInt(snapshot['paidAmount']),
+      capitalAmount: safeToInt(snapshot['capitalAmount']),
       scale: snapshot['scale'] ?? '',
       courtDateIds: safeListFromSnapshot(snapshot['courtDateIds']),
       requestIds: safeListFromSnapshot(snapshot['requestIds']),
@@ -167,9 +225,7 @@ class CaseModel {
       officeId: snapshot['officeId'] ?? '',
       correspondentId: snapshot['correspondentId'] ?? '',
       lawyerId: snapshot['lawyerId'] ?? '',
-      phase:
-          snapshot['phase']?.toInt() ??
-          1, // Default to phase 1 if not specified
+      phase: safeToInt(snapshot['phase'], defaultValue: 1),
       opposingAttorneyId: snapshot['opposingAttorneyId'] ?? '',
       opposingAttorneyName: snapshot['opposingAttorneyName'] ?? '',
     );
