@@ -45,30 +45,30 @@ class SheriffModel {
   factory SheriffModel.fromJson(Map<String, dynamic> json) {
     return SheriffModel(
       sheriffId: json['sheriffId'],
-      sheriffName: cleanString(json['SheriffName']),
-      magisterialDistrict: cleanString(json['MagisterialDistrict']),
-      address: cleanString(json['Address']),
-      postalAddress: cleanString(json['PostalAddress']),
-      officeLine: cleanString(json['OfficeLine']),
-      cellNumber: cleanString(json['CellNumber']),
-      emailAddress: cleanString(json['EmailAddress']),
-      province: cleanString(json['Province']),
-      postalCode: cleanString(json['PostalCode']),
+      sheriffName: cleanString(json['sheriffName']),
+      magisterialDistrict: cleanString(json['magisterialDistrict']),
+      address: cleanString(json['address']),
+      postalAddress: cleanString(json['postalAddress']),
+      officeLine: cleanString(json['officeLine']),
+      cellNumber: cleanString(json['cellNumber']),
+      emailAddress: cleanString(json['emailAddress']),
+      province: cleanString(json['province']),
+      postalCode: cleanString(json['postalCode']),
     );
   }
 
   factory SheriffModel.fromSnapshot(DocumentSnapshot snap) {
     return SheriffModel(
       sheriffId: snap.id,
-      sheriffName: cleanString(snap['SheriffName']),
-      magisterialDistrict: cleanString(snap['MagisterialDistrict']),
-      address: cleanString(snap['Address']),
-      postalAddress: cleanString(snap['PostalAddress']),
-      officeLine: cleanString(snap['OfficeLine']),
-      cellNumber: cleanString(snap['CellNumber']),
-      emailAddress: cleanString(snap['EmailAddress']),
-      province: cleanString(snap['Province']),
-      postalCode: cleanString(snap['PostalCode']),
+      sheriffName: cleanString(snap['sheriffName']),
+      magisterialDistrict: cleanString(snap['magisterialDistrict']),
+      address: cleanString(snap['address']),
+      postalAddress: cleanString(snap['postalAddress']),
+      officeLine: cleanString(snap['officeLine']),
+      cellNumber: cleanString(snap['cellNumber']),
+      emailAddress: cleanString(snap['emailAddress']),
+      province: cleanString(snap['province']),
+      postalCode: cleanString(snap['postalCode']),
     );
   }
 
