@@ -27,10 +27,14 @@ class DocumentService {
 
   Future<String> uploadFileToStorage(PlatformFile file) async {
     try {
+      // Decode and sanitize filename for cross-platform consistency
       final fileName = Uri.decodeComponent(file.name).replaceAll(' ', '_');
 
-      // Create storage reference
-      final storageRef = _storage.ref().child('task_files/$fileName');
+      // Create unique timestamp folder to prevent overwrites
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      // Create storage reference with timestamp folder for overwrite-safety
+      final storageRef = _storage.ref().child('task_files/$timestamp/$fileName');
 
       // Upload file
       Uint8List? fileBytes = file.bytes;

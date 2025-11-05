@@ -311,8 +311,16 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     required String uploadedBy,
   }) async {
     try {
+      // Decode and sanitize filename for cross-platform consistency
+      final safeFileName = Uri.decodeComponent(fileName).replaceAll(' ', '_');
+      
+      // Create unique timestamp folder to prevent overwrites
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
       final attachmentId = _uuid.v4();
-      final storagePath = 'cases/$caseId/documents/$attachmentId';
+      
+      // Store with timestamp folder and preserve original filename
+      final storagePath = 'cases/$caseId/documents/$timestamp/$safeFileName';
 
       final ref = _storage.ref().child(storagePath);
       final uploadTask = ref.putData(Uint8List.fromList(fileBytes));
@@ -321,7 +329,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
 
       final attachment = DocumentAttachment(
         id: attachmentId,
-        fileName: fileName,
+        fileName: safeFileName,
         fileUrl: downloadUrl,
         fileType: fileType,
         fileSize: fileBytes.length,
