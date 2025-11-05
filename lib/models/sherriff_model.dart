@@ -45,30 +45,30 @@ class SheriffModel {
   factory SheriffModel.fromJson(Map<String, dynamic> json) {
     return SheriffModel(
       sheriffId: json['sheriffId'],
-      sheriffName: cleanString(json['Sheriff Name']),
-      magisterialDistrict: cleanString(json['Magisterial District (HL)']),
+      sheriffName: cleanString(json['SheriffName']),
+      magisterialDistrict: cleanString(json['MagisterialDistrict']),
       address: cleanString(json['Address']),
-      postalAddress: cleanString(json['Postal Address']),
-      officeLine: cleanString(json['Office Line 1']),
-      cellNumber: cleanString(json['Cell Number']),
-      emailAddress: cleanString(json['Email Address']),
+      postalAddress: cleanString(json['PostalAddress']),
+      officeLine: cleanString(json['OfficeLine']),
+      cellNumber: cleanString(json['CellNumber']),
+      emailAddress: cleanString(json['EmailAddress']),
       province: cleanString(json['Province']),
-      postalCode: cleanString(json['Postal Code']),
+      postalCode: cleanString(json['PostalCode']),
     );
   }
 
   factory SheriffModel.fromSnapshot(DocumentSnapshot snap) {
     return SheriffModel(
       sheriffId: snap.id,
-      sheriffName: cleanString(snap['Sheriff Name']),
-      magisterialDistrict: cleanString(snap['Magisterial District (HL)']),
+      sheriffName: cleanString(snap['SheriffName']),
+      magisterialDistrict: cleanString(snap['MagisterialDistrict']),
       address: cleanString(snap['Address']),
-      postalAddress: cleanString(snap['Postal Address']),
-      officeLine: cleanString(snap['Office Line 1']),
-      cellNumber: cleanString(snap['Cell Number']),
-      emailAddress: cleanString(snap['Email Address']),
+      postalAddress: cleanString(snap['PostalAddress']),
+      officeLine: cleanString(snap['OfficeLine']),
+      cellNumber: cleanString(snap['CellNumber']),
+      emailAddress: cleanString(snap['EmailAddress']),
       province: cleanString(snap['Province']),
-      postalCode: cleanString(snap['Postal Code']),
+      postalCode: cleanString(snap['PostalCode']),
     );
   }
 
