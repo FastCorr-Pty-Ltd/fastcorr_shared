@@ -1,6 +1,7 @@
 /// Unified case communication service for cross-app communication
 /// This service is shared between fastcorr_user and fastcorr_admin apps
 
+import 'dart:developer';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -65,10 +66,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
       // Update case last activity
       await _updateCaseLastActivity(orgId, caseId);
 
-      print('✅ Chat message sent: $messageId');
+      log('✅ Chat message sent: $messageId');
       return messageId;
     } catch (e) {
-      print('❌ Error sending chat message: $e');
+      log('❌ Error sending chat message: $e');
       rethrow;
     }
   }
@@ -109,10 +110,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
       // Update case last activity
       await _updateCaseLastActivity(orgId, caseId);
 
-      print('✅ Document message sent: $messageId');
+      log('✅ Document message sent: $messageId');
       return messageId;
     } catch (e) {
-      print('❌ Error sending document message: $e');
+      log('❌ Error sending document message: $e');
       rethrow;
     }
   }
@@ -142,10 +143,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
       // Update case last activity
       await _updateCaseLastActivity(orgId, caseId);
 
-      print('✅ System log created: $messageId');
+      log('✅ System log created: $messageId');
       return messageId;
     } catch (e) {
-      print('❌ Error creating system log: $e');
+      log('❌ Error creating system log: $e');
       rethrow;
     }
   }
@@ -175,10 +176,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
       // Update case last activity
       await _updateCaseLastActivity(orgId, caseId);
 
-      print('✅ System notification created: $messageId');
+      log('✅ System notification created: $messageId');
       return messageId;
     } catch (e) {
-      print('❌ Error creating system notification: $e');
+      log('❌ Error creating system notification: $e');
       rethrow;
     }
   }
@@ -220,7 +221,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
           )
           .toList();
     } catch (e) {
-      print('❌ Error getting case messages: $e');
+      log('❌ Error getting case messages: $e');
       rethrow;
     }
   }
@@ -234,9 +235,9 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   ) async {
     try {
       await _markAsReadBy(messageId, orgId, caseId, userId);
-      print('✅ Message marked as read: $messageId by $userId');
+      log('✅ Message marked as read: $messageId by $userId');
     } catch (e) {
-      print('❌ Error marking message as read: $e');
+      log('❌ Error marking message as read: $e');
       rethrow;
     }
   }
@@ -271,7 +272,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
         orgId,
       ).doc(caseId).update({'lastActivity': FieldValue.serverTimestamp()});
     } catch (e) {
-      print('❌ Error updating case last activity: $e');
+      log('❌ Error updating case last activity: $e');
       // Don't rethrow as this is not critical
     }
   }
@@ -295,7 +296,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
           .where((message) => !readMessageIds.contains(message.id))
           .length;
     } catch (e) {
-      print('❌ Error getting unread message count: $e');
+      log('❌ Error getting unread message count: $e');
       return 0;
     }
   }
@@ -328,10 +329,10 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
         uploadedBy: uploadedBy,
       );
 
-      print('✅ Document uploaded: $attachmentId');
+      log('✅ Document uploaded: $attachmentId');
       return attachment;
     } catch (e) {
-      print('❌ Error uploading document: $e');
+      log('❌ Error uploading document: $e');
       rethrow;
     }
   }
@@ -344,9 +345,9 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   ) async {
     try {
       await _getCommunicationsRef(orgId, caseId).doc(messageId).delete();
-      print('✅ Message deleted: $messageId');
+      log('✅ Message deleted: $messageId');
     } catch (e) {
-      print('❌ Error deleting message: $e');
+      log('❌ Error deleting message: $e');
       rethrow;
     }
   }
@@ -370,7 +371,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
           )
           .toList();
     } catch (e) {
-      print('❌ Error getting messages by type: $e');
+      log('❌ Error getting messages by type: $e');
       rethrow;
     }
   }
@@ -391,7 +392,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
           )
           .toList();
     } catch (e) {
-      print('❌ Error searching messages: $e');
+      log('❌ Error searching messages: $e');
       rethrow;
     }
   }
@@ -432,7 +433,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
 
       return stats;
     } catch (e) {
-      print('❌ Error getting message statistics: $e');
+      log('❌ Error getting message statistics: $e');
       return {
         'total': 0,
         'chatMessages': 0,
