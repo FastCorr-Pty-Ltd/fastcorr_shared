@@ -3,9 +3,11 @@ import 'package:fastcorr_shared/utils/utils.dart';
 import 'package:flutter/material.dart';
 
 enum ContactRole {
+  plaintiff,
   applicant,
   applicantAttorney,
   respondentAttorney,
+  defendant,
   firstDefendant,
   secondDefendant,
   thirdDefendant,
@@ -144,6 +146,10 @@ class ContactModel {
 // Helper functions
 String getPartyRoleDisplayName(ContactRole role) {
   switch (role) {
+    case ContactRole.plaintiff:
+      return 'Plaintiff';
+    case ContactRole.defendant:
+      return 'Defendant';
     case ContactRole.applicant:
       return 'Applicant';
     case ContactRole.firstDefendant:
@@ -185,6 +191,10 @@ String getPartyRoleDisplayName(ContactRole role) {
 
 Color getPartyRoleColor(ContactRole role) {
   switch (role) {
+    case ContactRole.plaintiff:
+      return Colors.blue;
+    case ContactRole.defendant:
+      return Colors.red;
     case ContactRole.applicant:
       return Colors.blue;
     case ContactRole.applicantAttorney:
@@ -226,6 +236,10 @@ Color getPartyRoleColor(ContactRole role) {
 
 IconData getPartyRoleIcon(ContactRole role) {
   switch (role) {
+    case ContactRole.plaintiff:
+      return Icons.person;
+    case ContactRole.defendant:
+      return Icons.person_outline;
     case ContactRole.applicant:
       return Icons.person;
     case ContactRole.firstDefendant:
