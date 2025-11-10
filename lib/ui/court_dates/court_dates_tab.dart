@@ -1,31 +1,30 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 import 'package:stacked/stacked.dart';
-import 'package:data_table_2/data_table_2.dart';
 
-import '../../models/court_date_model.dart';
+import '../../models/trial_model.dart';
 import 'court_dates_viewmodel.dart';
-import 'add_court_date_dialog.dart';
 
-/// Shared court dates tab widget that can be used in both user and admin apps
+/// Shared trial schedule tab rendered on the case details screen in both apps.
 class CourtDatesTab extends StatelessWidget {
-  final String caseId;
-  final String orgId;
-  final String? caseTitle;
-  final ColorScheme? colorScheme;
-  final TextTheme? textTheme;
-  final Function(CourtDateModel?)? onAddCourtDate;
-  final Function(CourtDateModel?)? onUpdateCourtDate;
   const CourtDatesTab({
     super.key,
-    required this.caseId,
-    required this.orgId,
+    required this.litNumber,
+    this.orgId,
     this.caseTitle,
     this.colorScheme,
     this.textTheme,
-    this.onAddCourtDate,
-    this.onUpdateCourtDate,
+    this.onAddTrial,
   });
+
+  final String litNumber;
+  final String? orgId;
+  final String? caseTitle;
+  final ColorScheme? colorScheme;
+  final TextTheme? textTheme;
+  final Future<void> Function()? onAddTrial;
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +32,9 @@ class CourtDatesTab extends StatelessWidget {
     final txtTheme = textTheme ?? Theme.of(context).textTheme;
 
     return ViewModelBuilder<CourtDatesViewModel>.reactive(
-      viewModelBuilder: () =>
-          CourtDatesViewModel()
-            ..initialize(caseId: caseId, orgId: orgId, caseTitle: caseTitle),
-      builder: (context, viewModel, child) {
+      viewModelBuilder: () => CourtDatesViewModel()
+        ..initialize(litNumber: litNumber, orgId: orgId, caseTitle: caseTitle),
+      builder: (context, viewModel, _) {
         if (viewModel.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -46,54 +44,18 @@ class CourtDatesTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with Add Button
-              _buildHeader(context, viewModel, color, txtTheme),
+              _buildHeader(color, txtTheme),
               const SizedBox(height: 24),
-
-              // Error Message
               if (viewModel.errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.errorContainer,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: color.error),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(IconlyBroken.danger, color: color.error),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          viewModel.errorMessage!,
-                          style: txtTheme.bodyMedium!.copyWith(
-                            color: color.onErrorContainer,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: viewModel.clearError,
-                        icon: Icon(
-                          IconlyBroken.close_square,
-                          color: color.error,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildErrorBanner(viewModel.errorMessage!, color, txtTheme),
                 const SizedBox(height: 16),
               ],
-
-              // Court Dates Content
-              if (viewModel.courtDates.isNotEmpty) ...[
-                // Court Dates Overview
-                _buildCourtDatesOverview(viewModel, color, txtTheme),
+              if (viewModel.trials.isNotEmpty) ...[
+                _buildOverviewRow(viewModel, color, txtTheme),
                 const SizedBox(height: 32),
-
-                // Court Dates List
-                _buildCourtDatesList(viewModel, context, color, txtTheme),
+                _buildTrialTable(context, viewModel.trials, color, txtTheme),
               ] else
-                _buildEmptyState(context, viewModel, color, txtTheme),
+                _buildEmptyState(color, txtTheme),
             ],
           ),
         );
@@ -101,50 +63,57 @@ class CourtDatesTab extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(
-    BuildContext context,
-    CourtDatesViewModel viewModel,
+  Widget _buildHeader(ColorScheme color, TextTheme txtTheme) {
+    return Row(
+      children: [
+        Icon(IconlyBroken.calendar, color: color.primary, size: 32),
+        const SizedBox(width: 12),
+        Text(
+          'Trial Schedule',
+          style: txtTheme.headlineSmall!.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color.onSurface,
+          ),
+        ),
+        const Spacer(),
+        if (onAddTrial != null)
+          ElevatedButton.icon(
+            onPressed: () async => onAddTrial?.call(),
+            icon: Icon(IconlyBroken.plus, size: 20, color: color.onPrimary),
+            label: Text('Add Trial', style: TextStyle(color: color.onPrimary)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildErrorBanner(
+    String error,
     ColorScheme color,
     TextTheme txtTheme,
   ) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.error),
+      ),
+      child: Row(
         children: [
-          Icon(
-            IconlyBroken.calendar,
-            size: 80,
-            color: color.onSurface.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Court Dates Available',
-            style: txtTheme.headlineSmall!.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'No court dates have been scheduled for this case yet.',
-            style: txtTheme.bodyMedium!.copyWith(
-              color: color.onSurface.withValues(alpha: 0.6),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _showAddCourtDateDialog(context, viewModel),
-            icon: Icon(IconlyBroken.plus, size: 20, color: color.onPrimary),
-            label: Text(
-              'Add First Court Date',
-              style: TextStyle(color: color.onPrimary),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: color.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          Icon(IconlyBroken.danger, color: color.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              error,
+              style: txtTheme.bodyMedium!.copyWith(
+                color: color.onErrorContainer,
               ),
             ),
           ),
@@ -153,50 +122,24 @@ class CourtDatesTab extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
+  Widget _buildOverviewRow(
     CourtDatesViewModel viewModel,
     ColorScheme color,
     TextTheme txtTheme,
   ) {
     return Row(
       children: [
-        Icon(IconlyBroken.calendar, color: color.primary, size: 32),
-        const SizedBox(width: 12),
-        Text(
-          'Court Dates',
-          style: txtTheme.headlineSmall!.copyWith(
-            fontWeight: FontWeight.bold,
-            color: color.onSurface,
+        Expanded(
+          child: _buildOverviewCard(
+            'Total',
+            viewModel.totalCount.toString(),
+            color.surfaceContainerHighest,
+            color.primary,
+            IconlyBroken.calendar,
+            txtTheme,
           ),
         ),
-        const Spacer(),
-        ElevatedButton.icon(
-          onPressed: () => _showAddCourtDateDialog(context, viewModel),
-          icon: Icon(IconlyBroken.plus, size: 20, color: color.onPrimary),
-          label: Text(
-            'Add Court Date',
-            style: TextStyle(color: color.onPrimary),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: color.primary,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCourtDatesOverview(
-    CourtDatesViewModel viewModel,
-    ColorScheme color,
-    TextTheme txtTheme,
-  ) {
-    return Row(
-      children: [
+        const SizedBox(width: 16),
         Expanded(
           child: _buildOverviewCard(
             'Urgent',
@@ -236,35 +179,36 @@ class CourtDatesTab extends StatelessWidget {
   Widget _buildOverviewCard(
     String title,
     String count,
-    Color bgColor,
-    Color textColor,
+    Color background,
+    Color foreground,
     IconData icon,
     TextTheme txtTheme,
   ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: textColor.withValues(alpha: 0.3)),
+        border: Border.all(color: foreground.withValues(alpha: 0.25)),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: textColor, size: 32),
+          Icon(icon, color: foreground, size: 32),
           const SizedBox(height: 8),
           Text(
             count,
             style: txtTheme.headlineMedium!.copyWith(
               fontWeight: FontWeight.bold,
-              color: textColor,
+              color: foreground,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
             style: txtTheme.bodyMedium!.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w500,
+              color: foreground,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -272,279 +216,91 @@ class CourtDatesTab extends StatelessWidget {
     );
   }
 
-  Widget _buildCourtDatesList(
-    CourtDatesViewModel viewModel,
+  Widget _buildTrialTable(
     BuildContext context,
+    List<TrialModel> trials,
     ColorScheme color,
     TextTheme txtTheme,
   ) {
-    // Court dates are already sorted by the viewmodel
-    final sortedDates = viewModel.courtDates;
+    if (trials.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      height: 500,
       decoration: BoxDecoration(
         color: color.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: color.outline.withValues(alpha: 0.1),
-            spreadRadius: 1,
+            color: color.outline.withValues(alpha: 0.08),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: DataTable2(
-        columnSpacing: 12,
+        columnSpacing: 16,
         horizontalMargin: 16,
-        minWidth: 800,
-
+        minWidth: 900,
         headingRowColor: WidgetStateProperty.all(color.surfaceContainerHighest),
         headingRowHeight: 56,
-        dataRowHeight: 64,
+        dataRowHeight: 68,
         border: TableBorder.all(
           color: color.outline.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         columns: [
           DataColumn2(
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Type',
-                  style: txtTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: color.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                if (viewModel.sortColumn == 'dateType')
-                  Icon(
-                    viewModel.sortAscending
-                        ? Icons.arrow_upward
-                        : Icons.arrow_downward,
-                    size: 16,
-                    color: color.primary,
-                  ),
-              ],
-            ),
-            onSort: (columnIndex, ascending) {
-              viewModel.updateSorting('dateType');
-            },
+            label: Text('Type', style: _headingStyle(txtTheme, color)),
             size: ColumnSize.S,
           ),
           DataColumn2(
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Status',
-                  style: txtTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: color.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                if (viewModel.sortColumn == 'status')
-                  Icon(
-                    viewModel.sortAscending
-                        ? Icons.arrow_upward
-                        : Icons.arrow_downward,
-                    size: 16,
-                    color: color.primary,
-                  ),
-              ],
-            ),
-            onSort: (columnIndex, ascending) {
-              viewModel.updateSorting('status');
-            },
+            label: Text('Status', style: _headingStyle(txtTheme, color)),
             size: ColumnSize.S,
           ),
           DataColumn2(
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Date & Time',
-                  style: txtTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: color.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                if (viewModel.sortColumn == 'courtDate')
-                  Icon(
-                    viewModel.sortAscending
-                        ? Icons.arrow_upward
-                        : Icons.arrow_downward,
-                    size: 16,
-                    color: color.primary,
-                  ),
-              ],
-            ),
-            onSort: (columnIndex, ascending) {
-              viewModel.updateSorting('courtDate');
-            },
+            label: Text('Date & Time', style: _headingStyle(txtTheme, color)),
             size: ColumnSize.M,
           ),
           DataColumn2(
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Description',
-                  style: txtTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: color.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                if (viewModel.sortColumn == 'description')
-                  Icon(
-                    viewModel.sortAscending
-                        ? Icons.arrow_upward
-                        : Icons.arrow_downward,
-                    size: 16,
-                    color: color.primary,
-                  ),
-              ],
+            label: Text('Court', style: _headingStyle(txtTheme, color)),
+            size: ColumnSize.M,
+          ),
+          DataColumn2(
+            label: Text('Correspondent', style: _headingStyle(txtTheme, color)),
+            size: ColumnSize.M,
+          ),
+          DataColumn2(
+            label: Text(
+              'Opposing Attorney',
+              style: _headingStyle(txtTheme, color),
             ),
-            onSort: (columnIndex, ascending) {
-              viewModel.updateSorting('description');
-            },
+            size: ColumnSize.M,
+          ),
+          DataColumn2(
+            label: Text(
+              'Outcome / Notes',
+              style: _headingStyle(txtTheme, color),
+            ),
             size: ColumnSize.L,
           ),
-          DataColumn2(
-            label: Text(
-              'Notes',
-              style: txtTheme.bodyMedium!.copyWith(
-                fontWeight: FontWeight.w600,
-                color: color.onSurface,
-              ),
-            ),
-            size: ColumnSize.M,
-          ),
-          DataColumn2(
-            label: Text(
-              'Actions',
-              style: txtTheme.bodyMedium!.copyWith(
-                fontWeight: FontWeight.w600,
-                color: color.onSurface,
-              ),
-            ),
-            size: ColumnSize.S,
-          ),
         ],
-        rows: sortedDates.map((courtDate) {
-          final daysUntil = courtDate.courtDate
-              .difference(DateTime.now())
-              .inDays;
-          final isPast = daysUntil < 0;
+        rows: trials.map((trial) {
+          final trialDate = _trialDate(trial);
+          final daysUntil = trialDate.difference(DateTime.now()).inDays;
+          final isPast = trialDate.isBefore(DateTime.now());
 
           return DataRow2(
             color: WidgetStateProperty.all(
               isPast
-                  ? color.surfaceContainerHighest.withValues(alpha: 0.3)
+                  ? color.surfaceContainerHighest.withValues(alpha: 0.35)
                   : null,
             ),
             cells: [
-              // Type
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: CourtDateModel.getDateTypeColor(
-                      courtDate.dateType,
-                    ).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: CourtDateModel.getDateTypeColor(
-                        courtDate.dateType,
-                      ).withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    CourtDateModel.getDateTypeDisplayName(courtDate.dateType),
-                    style: txtTheme.bodySmall!.copyWith(
-                      color: CourtDateModel.getDateTypeColor(
-                        courtDate.dateType,
-                      ),
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-
-              // Status
-              DataCell(
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(courtDate.status, color),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _getStatusText(courtDate.status, daysUntil),
-                    style: txtTheme.bodySmall!.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-
-              // Date & Time
-              DataCell(
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _formatDate(courtDate.courtDate),
-                      style: txtTheme.bodyMedium!.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isPast
-                            ? color.onSurface.withValues(alpha: 0.6)
-                            : color.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatTime(courtDate.courtDate),
-                      style: txtTheme.bodySmall!.copyWith(
-                        color: isPast
-                            ? color.onSurface.withValues(alpha: 0.5)
-                            : color.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    if (!isPast) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        _getDaysText(daysUntil),
-                        style: txtTheme.bodySmall!.copyWith(
-                          color: _getDaysColor(daysUntil, color),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-              // Description
+              DataCell(_buildTypeChip(trial.type, txtTheme)),
+              DataCell(_buildStatusChip(trial.status, color, txtTheme)),
+              DataCell(_buildDateCell(trialDate, daysUntil, color, txtTheme)),
               DataCell(
                 Text(
-                  courtDate.description,
+                  trial.courtName,
                   style: txtTheme.bodyMedium!.copyWith(
                     fontWeight: FontWeight.w500,
                     color: isPast
@@ -553,63 +309,38 @@ class CourtDatesTab extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // Notes
               DataCell(
                 Text(
-                  courtDate.notes ?? 'No notes',
+                  trial.correspondentName.isNotEmpty
+                      ? trial.correspondentName
+                      : 'Unassigned',
                   style: txtTheme.bodyMedium!.copyWith(
-                    color: isPast
+                    color: trial.correspondentName.isEmpty
                         ? color.onSurface.withValues(alpha: 0.5)
-                        : color.onSurface.withValues(alpha: 0.7),
+                        : color.onSurface,
+                  ),
+                ),
+              ),
+              DataCell(
+                Text(
+                  trial.opposingAttorney.isNotEmpty
+                      ? trial.opposingAttorney
+                      : 'Not specified',
+                  style: txtTheme.bodyMedium!.copyWith(
+                    color: color.onSurface.withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+              DataCell(
+                Text(
+                  (trial.trialOutcome?.isNotEmpty ?? false)
+                      ? trial.trialOutcome!
+                      : 'No outcome recorded',
+                  style: txtTheme.bodyMedium!.copyWith(
+                    color: color.onSurface.withValues(alpha: 0.75),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                ),
-              ),
-
-              // Actions
-              DataCell(
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () => _showEditCourtDateDialog(
-                        context,
-                        viewModel,
-                        courtDate,
-                      ),
-                      icon: Icon(
-                        IconlyBroken.edit,
-                        size: 20,
-                        color: color.primary,
-                      ),
-                      tooltip: 'Edit',
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
-                      ),
-                      padding: EdgeInsets.zero,
-                    ),
-                    IconButton(
-                      onPressed: () => _showDeleteConfirmation(
-                        context,
-                        viewModel,
-                        courtDate,
-                      ),
-                      icon: Icon(
-                        IconlyBroken.delete,
-                        size: 20,
-                        color: color.error,
-                      ),
-                      tooltip: 'Delete',
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
-                      ),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ],
                 ),
               ),
             ],
@@ -619,182 +350,239 @@ class CourtDatesTab extends StatelessWidget {
     );
   }
 
-  String _formatTime(DateTime dateTime) {
-    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
-  Color _getStatusColor(CourtDateStatus status, ColorScheme color) {
-    switch (status) {
-      case CourtDateStatus.urgent:
-        return color.error;
-      case CourtDateStatus.upcoming:
-        return color.tertiary;
-      case CourtDateStatus.scheduled:
-        return color.primary;
-      case CourtDateStatus.completed:
-        return color.onSurface.withValues(alpha: 0.6);
-    }
-  }
-
-  String _getStatusText(CourtDateStatus status, int daysUntil) {
-    if (daysUntil < 0) return 'PAST';
-    if (daysUntil == 0) return 'TODAY';
-
-    switch (status) {
-      case CourtDateStatus.urgent:
-        return 'URGENT';
-      case CourtDateStatus.upcoming:
-        return 'UPCOMING';
-      case CourtDateStatus.scheduled:
-        return 'SCHEDULED';
-      case CourtDateStatus.completed:
-        return 'COMPLETED';
-    }
-  }
-
-  String _getDaysText(int daysUntil) {
-    if (daysUntil < 0) return '${daysUntil.abs()} days ago';
-    if (daysUntil == 0) return 'Today';
-    if (daysUntil == 1) return 'Tomorrow';
-    if (daysUntil < 7) return 'In $daysUntil days';
-    if (daysUntil < 30) return 'In ${(daysUntil / 7).round()} weeks';
-    return 'In ${(daysUntil / 30).round()} months';
-  }
-
-  Color _getDaysColor(int daysUntil, ColorScheme color) {
-    if (daysUntil < 0) return color.onSurface.withValues(alpha: 0.6);
-    if (daysUntil <= 7) return color.error;
-    if (daysUntil <= 30) return color.tertiary;
-    return color.primary;
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  /// Show add court date dialog
-  Future<void> _showAddCourtDateDialog(
-    BuildContext context,
-    CourtDatesViewModel viewModel,
-  ) async {
-    await showDialog(
-      context: context,
-      builder: (context) => AddCourtDateDialog(
-        onSave:
-            ({
-              required String description,
-              required DateTime courtDate,
-              required CourtDateType dateType,
-              String? notes,
-            }) async {
-              final courtDateModel = await viewModel.addCourtDate(
-                description: description,
-                courtDate: courtDate,
-                dateType: dateType,
-                notes: notes,
-              );
-              if (onAddCourtDate != null) {
-                onAddCourtDate!(courtDateModel);
-              }
-
-              if (courtDateModel != null && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Court date added successfully'),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                  ),
-                );
-              }
-            },
-      ),
-    );
-  }
-
-  /// Show edit court date dialog
-  Future<void> _showEditCourtDateDialog(
-    BuildContext context,
-    CourtDatesViewModel viewModel,
-    CourtDateModel existingCourtDate,
-  ) async {
-    await showDialog(
-      context: context,
-      builder: (context) => AddCourtDateDialog(
-        existingDate: existingCourtDate,
-        onSave:
-            ({
-              required String description,
-              required DateTime courtDate,
-              required CourtDateType dateType,
-              String? notes,
-            }) async {
-              final courtDateModel = await viewModel.updateCourtDate(
-                dateId: existingCourtDate.dateId,
-                description: description,
-                courtDate: courtDate,
-                dateType: dateType,
-                notes: notes,
-              );
-
-              if (onUpdateCourtDate != null) {
-                onUpdateCourtDate!(courtDateModel);
-              }
-
-              if (courtDateModel != null && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Court date updated successfully'),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                  ),
-                );
-              }
-            },
-      ),
-    );
-  }
-
-  /// Show delete confirmation dialog
-  Future<void> _showDeleteConfirmation(
-    BuildContext context,
-    CourtDatesViewModel viewModel,
-    CourtDateModel courtDate,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Court Date'),
-        content: Text(
-          'Are you sure you want to delete "${courtDate.description}"?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+  Widget _buildEmptyState(ColorScheme color, TextTheme txtTheme) {
+    return Center(
+      child: Column(
+        children: [
+          Icon(
+            IconlyBroken.calendar,
+            size: 80,
+            color: color.onSurface.withValues(alpha: 0.3),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+          const SizedBox(height: 16),
+          Text(
+            'No trials scheduled',
+            style: txtTheme.headlineSmall!.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color.onSurface,
             ),
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Theme.of(context).colorScheme.onError),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Trials linked to this case will appear here once scheduled.',
+            style: txtTheme.bodyMedium!.copyWith(
+              color: color.onSurface.withValues(alpha: 0.6),
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
+  }
 
-    if (confirmed == true) {
-      final success = await viewModel.deleteCourtDate(courtDate.dateId);
+  TextStyle _headingStyle(TextTheme txtTheme, ColorScheme color) {
+    return txtTheme.bodyMedium!.copyWith(
+      fontWeight: FontWeight.w600,
+      color: color.onSurface,
+    );
+  }
 
-      if (success && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Court date deleted successfully'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
+  Widget _buildTypeChip(TrialType type, TextTheme txtTheme) {
+    final color = _trialTypeColor(type);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        _trialTypeLabel(type),
+        style: txtTheme.bodySmall!.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(
+    TrialStatus status,
+    ColorScheme colorScheme,
+    TextTheme txtTheme,
+  ) {
+    final background = _statusBackground(status, colorScheme);
+    final foreground = _statusForeground(status, colorScheme);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        _statusLabel(status),
+        style: txtTheme.bodySmall!.copyWith(
+          color: foreground,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateCell(
+    DateTime date,
+    int daysUntil,
+    ColorScheme color,
+    TextTheme txtTheme,
+  ) {
+    final isPast = date.isBefore(DateTime.now());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          _formatDate(date),
+          style: txtTheme.bodyMedium!.copyWith(
+            fontWeight: FontWeight.w600,
+            color: isPast
+                ? color.onSurface.withValues(alpha: 0.6)
+                : color.onSurface,
           ),
-        );
-      }
+        ),
+        const SizedBox(height: 2),
+        Text(
+          _formatTime(date),
+          style: txtTheme.bodySmall!.copyWith(
+            color: color.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        if (!isPast) ...[
+          const SizedBox(height: 2),
+          Text(
+            _daysLabel(daysUntil),
+            style: txtTheme.bodySmall!.copyWith(
+              color: _daysColor(daysUntil, color),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // Helpers ------------------------------------------------------------------
+
+  DateTime _trialDate(TrialModel trial) {
+    final dynamic raw = trial.trialDate;
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is DateTime) return raw;
+    return DateTime.now();
+  }
+
+  String _trialTypeLabel(TrialType type) {
+    switch (type) {
+      case TrialType.trial:
+        return 'Trial';
+      case TrialType.preTrial:
+        return 'Pre-Trial';
+      case TrialType.motion:
+        return 'Motion';
     }
+  }
+
+  Color _trialTypeColor(TrialType type) {
+    switch (type) {
+      case TrialType.trial:
+        return const Color(0xFFF44336);
+      case TrialType.preTrial:
+        return const Color(0xFF2196F3);
+      case TrialType.motion:
+        return const Color(0xFF9C27B0);
+    }
+  }
+
+  String _statusLabel(TrialStatus status) {
+    switch (status) {
+      case TrialStatus.pending:
+        return 'Pending';
+      case TrialStatus.urgent:
+        return 'Urgent';
+      case TrialStatus.proceeding:
+        return 'Proceeding';
+      case TrialStatus.postponed:
+        return 'Postponed';
+      case TrialStatus.settled:
+        return 'Settled';
+    }
+  }
+
+  Color _statusBackground(TrialStatus status, ColorScheme scheme) {
+    switch (status) {
+      case TrialStatus.pending:
+        return scheme.primary.withValues(alpha: 0.15);
+      case TrialStatus.urgent:
+        return scheme.error.withValues(alpha: 0.15);
+      case TrialStatus.proceeding:
+        return scheme.tertiary.withValues(alpha: 0.15);
+      case TrialStatus.postponed:
+        return scheme.surfaceContainerHighest.withValues(alpha: 0.25);
+      case TrialStatus.settled:
+        return scheme.secondary.withValues(alpha: 0.15);
+    }
+  }
+
+  Color _statusForeground(TrialStatus status, ColorScheme scheme) {
+    switch (status) {
+      case TrialStatus.pending:
+        return scheme.primary;
+      case TrialStatus.urgent:
+        return scheme.error;
+      case TrialStatus.proceeding:
+        return scheme.tertiary;
+      case TrialStatus.postponed:
+        return scheme.onSurface.withValues(alpha: 0.7);
+      case TrialStatus.settled:
+        return scheme.secondary;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year}';
+  }
+
+  String _formatTime(DateTime date) {
+    final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+    final minute = date.minute.toString().padLeft(2, '0');
+    final period = date.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
+  }
+
+  String _daysLabel(int daysUntil) {
+    if (daysUntil < 0) return '${daysUntil.abs()} days ago';
+    if (daysUntil == 0) return 'Today';
+    if (daysUntil == 1) return 'Tomorrow';
+    if (daysUntil < 7) return 'In $daysUntil days';
+    if (daysUntil < 30) {
+      final weeks = (daysUntil / 7).round();
+      return 'In $weeks week${weeks == 1 ? '' : 's'}';
+    }
+    final months = (daysUntil / 30).round();
+    return 'In $months month${months == 1 ? '' : 's'}';
+  }
+
+  Color _daysColor(int daysUntil, ColorScheme scheme) {
+    if (daysUntil < 0) {
+      return scheme.onSurface.withValues(alpha: 0.6);
+    }
+    if (daysUntil <= 7) {
+      return scheme.error;
+    }
+    if (daysUntil <= 30) {
+      return scheme.tertiary;
+    }
+    return scheme.primary;
   }
 }

@@ -1,81 +1,76 @@
 import 'dart:async';
-import 'package:fastcorr_shared/services/services.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fastcorr_shared/models/trial_model.dart';
+import 'package:fastcorr_shared/services/trial_service.dart';
 import 'package:stacked/stacked.dart';
 
-import '../../models/court_date_model.dart';
-
-/// ViewModel for managing court dates functionality
+/// ViewModel for managing trial data within the shared case tab.
 class CourtDatesViewModel extends ReactiveViewModel {
-  final CourtDateService _courtDateService = CourtDateService();
-  String? _caseId;
+  final TrialService _trialService = TrialService();
+
+  String? _litNumber;
   String? _orgId;
   String? _caseTitle;
 
-  List<CourtDateModel> _courtDates = [];
+  List<TrialModel> _trials = [];
   String? _errorMessage;
   bool _isLoading = false;
-  StreamSubscription<List<CourtDateModel>>? _courtDatesSubscription;
+  StreamSubscription<List<TrialModel>>? _trialSubscription;
 
   // Sorting
-  String _sortColumn = 'courtDate';
+  String _sortColumn = 'trialDate';
   bool _sortAscending = true;
 
   // Getters
-  String? get caseId => _caseId;
+  String? get litNumber => _litNumber;
   String? get orgId => _orgId;
   String? get caseTitle => _caseTitle;
-  List<CourtDateModel> get courtDates => _getSortedCourtDates();
+  List<TrialModel> get trials => _getSortedTrials();
   String? get errorMessage => _errorMessage;
   bool get isLoading => _isLoading;
   String get sortColumn => _sortColumn;
   bool get sortAscending => _sortAscending;
 
   // Statistics
-  int get totalCount => _courtDates.length;
-  int get urgentCount => _courtDates.where((date) => date.isUrgent).length;
-  int get upcomingCount =>
-      _courtDates.where((date) => date.isUpcoming && !date.isUrgent).length;
-  int get completedCount => _courtDates
-      .where((date) => date.status == CourtDateStatus.completed)
+  int get totalCount => _trials.length;
+
+  int get urgentCount => _trials.where(_isUrgent).length;
+
+  int get upcomingCount => _trials
+      .where(
+        (trial) =>
+            !_isUrgent(trial) &&
+            !_isCompleted(trial) &&
+            !_isPast(trial) &&
+            _daysUntil(trial) <= 30,
+      )
       .length;
 
-  /// Get sorted court dates based on current sort settings
-  List<CourtDateModel> _getSortedCourtDates() {
-    final sorted = List<CourtDateModel>.from(_courtDates);
+  int get completedCount => _trials.where(_isCompleted).length;
 
-    // Default sorting: urgent first, then by date
-    if (_sortColumn == 'courtDate') {
-      sorted.sort((a, b) {
-        if (a.isUrgent && !b.isUrgent) return -1;
-        if (!a.isUrgent && b.isUrgent) return 1;
-        return _sortAscending
-            ? a.courtDate.compareTo(b.courtDate)
-            : b.courtDate.compareTo(a.courtDate);
-      });
-    } else if (_sortColumn == 'description') {
-      sorted.sort(
-        (a, b) => _sortAscending
-            ? a.description.compareTo(b.description)
-            : b.description.compareTo(a.description),
-      );
-    } else if (_sortColumn == 'dateType') {
-      sorted.sort(
-        (a, b) => _sortAscending
-            ? a.dateType.name.compareTo(b.dateType.name)
-            : b.dateType.name.compareTo(a.dateType.name),
-      );
-    } else if (_sortColumn == 'status') {
-      sorted.sort(
-        (a, b) => _sortAscending
-            ? a.status.name.compareTo(b.status.name)
-            : b.status.name.compareTo(a.status.name),
-      );
+  /// Initialize the viewmodel with case metadata.
+  Future<void> initialize({
+    required String litNumber,
+    String? orgId,
+    String? caseTitle,
+  }) async {
+    _litNumber = litNumber;
+    _orgId = orgId;
+    _caseTitle = caseTitle;
+
+    _setLoading(true);
+    try {
+      await _setupTrialStream();
+    } catch (e) {
+      _errorMessage = 'Failed to initialize trials: $e';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
     }
-
-    return sorted;
   }
 
-  /// Update sorting
+  /// Update sorting column/direction.
   void updateSorting(String column) {
     if (_sortColumn == column) {
       _sortAscending = !_sortAscending;
@@ -86,193 +81,7 @@ class CourtDatesViewModel extends ReactiveViewModel {
     notifyListeners();
   }
 
-  /// Initialize the viewmodel with a case ID and organization ID
-  Future<void> initialize({
-    required String caseId,
-    required String orgId,
-    String? caseTitle,
-  }) async {
-    _caseId = caseId;
-    _orgId = orgId;
-    _caseTitle = caseTitle;
-
-    setBusy(true);
-    try {
-      await _setupCourtDatesStream();
-    } catch (e) {
-      _errorMessage = 'Failed to initialize court dates: $e';
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /// Set up real-time stream for court dates
-  Future<void> _setupCourtDatesStream() async {
-    if (_caseId == null || _orgId == null) return;
-
-    _courtDatesSubscription?.cancel();
-
-    _courtDatesSubscription = _courtDateService
-        .getCourtDatesStreamForCase(caseId: _caseId!)
-        .listen(
-          (courtDates) {
-            _courtDates = courtDates;
-            notifyListeners();
-          },
-          onError: (error) {
-            _errorMessage = 'Error loading court dates: $error';
-            notifyListeners();
-          },
-        );
-  }
-
-  /// Add a new court date
-  Future<CourtDateModel?> addCourtDate({
-    required String description,
-    required DateTime courtDate,
-    required CourtDateType dateType,
-    String? notes,
-    String? createdBy,
-  }) async {
-    if (_caseId == null || _orgId == null) return null;
-
-    try {
-      setBusy(true);
-
-      // Check for conflicts
-      final conflicts = await _courtDateService.checkCourtDateConflicts(
-        caseId: _caseId!,
-        courtDate: courtDate,
-      );
-
-      if (conflicts.isNotEmpty) {
-        _errorMessage =
-            'Court date conflicts with existing dates. Please choose a different time.';
-        setBusy(false);
-        notifyListeners();
-        return null;
-      }
-
-      final courtDateModel = await _courtDateService.addCourtDate(
-        orgId: _orgId!,
-        caseId: _caseId!,
-        caseTitle: _caseTitle ?? 'Unknown Case',
-        description: description,
-        courtDate: courtDate,
-        dateType: dateType,
-        notes: notes,
-        createdBy: createdBy ?? 'Unknown',
-      );
-
-      // Stream will automatically update the UI
-      return courtDateModel;
-    } catch (e) {
-      _errorMessage = 'Failed to add court date: $e';
-      setBusy(false);
-      notifyListeners();
-      return null;
-    }
-  }
-
-  /// Update an existing court date
-  Future<CourtDateModel?> updateCourtDate({
-    required String dateId,
-    required String description,
-    required DateTime courtDate,
-    required CourtDateType dateType,
-    String? notes,
-    String? updatedBy,
-  }) async {
-    if (_orgId == null) return null;
-
-    try {
-      setBusy(true);
-
-      // Check for conflicts (excluding current date)
-      final conflicts = await _courtDateService.checkCourtDateConflicts(
-        caseId: _caseId!,
-        courtDate: courtDate,
-        excludeDateId: dateId,
-      );
-
-      if (conflicts.isNotEmpty) {
-        _errorMessage =
-            'Court date conflicts with existing dates. Please choose a different time.';
-        setBusy(false);
-        notifyListeners();
-        return null;
-      }
-
-      final courtDateModel = await _courtDateService.updateCourtDate(
-        caseId: _caseId!,
-        dateId: dateId,
-        description: description,
-        courtDate: courtDate,
-        dateType: dateType,
-        notes: notes,
-        updatedBy: updatedBy ?? 'Unknown',
-      );
-
-      // Stream will automatically update the UI
-      return courtDateModel;
-    } catch (e) {
-      _errorMessage = 'Failed to update court date: $e';
-      setBusy(false);
-      notifyListeners();
-      return null;
-    }
-  }
-
-  /// Delete a court date
-  Future<bool> deleteCourtDate(String dateId) async {
-    if (_orgId == null) return false;
-
-    try {
-      setBusy(true);
-
-      final success = await _courtDateService.deleteCourtDate(
-        caseId: _caseId!,
-        dateId: dateId,
-      );
-
-      // Stream will automatically update the UI
-      return success;
-    } catch (e) {
-      _errorMessage = 'Failed to delete court date: $e';
-      setBusy(false);
-      notifyListeners();
-      return false;
-    }
-  }
-
-  /// Update court date status
-  Future<CourtDateModel?> updateCourtDateStatus(
-    String dateId,
-    CourtDateStatus status,
-  ) async {
-    if (_orgId == null) return null;
-
-    try {
-      setBusy(true);
-
-      final courtDateModel = await _courtDateService.updateCourtDate(
-        caseId: _caseId!,
-        dateId: dateId,
-        status: status,
-        updatedBy: 'System',
-      );
-
-      // Stream will automatically update the UI
-      return courtDateModel;
-    } catch (e) {
-      _errorMessage = 'Failed to update court date status: $e';
-      setBusy(false);
-      notifyListeners();
-      return null;
-    }
-  }
-
-  /// Clear error message
+  /// Clear error message.
   void clearError() {
     _errorMessage = null;
     notifyListeners();
@@ -280,10 +89,100 @@ class CourtDatesViewModel extends ReactiveViewModel {
 
   @override
   void dispose() {
-    _courtDatesSubscription?.cancel();
+    _trialSubscription?.cancel();
     super.dispose();
   }
 
   @override
   List<ReactiveServiceMixin> get reactiveServices => [];
+
+  // Internal helpers --------------------------------------------------------
+
+  Future<void> _setupTrialStream() async {
+    if (_litNumber == null || _litNumber!.isEmpty) return;
+
+    _trialSubscription?.cancel();
+    _trialSubscription = _trialService
+        .watchTrialsByLitNumber(_litNumber!)
+        .listen(_onTrialsUpdated, onError: _onStreamError);
+  }
+
+  void _onTrialsUpdated(List<TrialModel> trials) {
+    if (_orgId != null && _orgId!.isNotEmpty) {
+      _trials = trials.where((trial) => trial.orgId == _orgId).toList();
+    } else {
+      _trials = trials;
+    }
+    notifyListeners();
+  }
+
+  void _onStreamError(Object error) {
+    _errorMessage = 'Error loading trials: $error';
+    notifyListeners();
+  }
+
+  List<TrialModel> _getSortedTrials() {
+    final sorted = List<TrialModel>.from(_trials);
+
+    int compareByDate(TrialModel a, TrialModel b) {
+      final dateCompare =
+          _trialDate(a).compareTo(_trialDate(b)) * (_sortAscending ? 1 : -1);
+      return dateCompare;
+    }
+
+    switch (_sortColumn) {
+      case 'type':
+        sorted.sort((a, b) => _sortAscending
+            ? a.type.name.compareTo(b.type.name)
+            : b.type.name.compareTo(a.type.name));
+        break;
+      case 'status':
+        sorted.sort((a, b) => _sortAscending
+            ? a.status.name.compareTo(b.status.name)
+            : b.status.name.compareTo(a.status.name));
+        break;
+      case 'correspondent':
+        sorted.sort((a, b) => _sortAscending
+            ? a.correspondentName.compareTo(b.correspondentName)
+            : b.correspondentName.compareTo(a.correspondentName));
+        break;
+      case 'court':
+        sorted.sort((a, b) => _sortAscending
+            ? a.courtName.compareTo(b.courtName)
+            : b.courtName.compareTo(a.courtName));
+        break;
+      case 'trialDate':
+      default:
+        sorted.sort(compareByDate);
+        break;
+    }
+
+    return sorted;
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  bool _isCompleted(TrialModel trial) =>
+      trial.status == TrialStatus.settled ||
+      trial.status == TrialStatus.proceeding;
+
+  bool _isPast(TrialModel trial) => _trialDate(trial).isBefore(DateTime.now());
+
+  bool _isUrgent(TrialModel trial) {
+    final days = _daysUntil(trial);
+    return !_isCompleted(trial) && days >= 0 && days <= 7;
+  }
+
+  int _daysUntil(TrialModel trial) =>
+      _trialDate(trial).difference(DateTime.now()).inDays;
+
+  DateTime _trialDate(TrialModel trial) {
+    final dynamic raw = trial.trialDate;
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is DateTime) return raw;
+    return DateTime.now();
+  }
 }
