@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/models/trial_model.dart';
 import 'package:fastcorr_shared/services/trial_service.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:stacked/stacked.dart';
 
 /// ViewModel for managing trial data within the shared case tab.
@@ -18,6 +19,9 @@ class CourtDatesViewModel extends ReactiveViewModel {
   bool _isLoading = false;
   StreamSubscription<List<TrialModel>>? _trialSubscription;
 
+  TrialType? _typeFilter;
+  TrialStatus? _statusFilter;
+
   // Sorting
   String _sortColumn = 'trialDate';
   bool _sortAscending = true;
@@ -31,13 +35,17 @@ class CourtDatesViewModel extends ReactiveViewModel {
   bool get isLoading => _isLoading;
   String get sortColumn => _sortColumn;
   bool get sortAscending => _sortAscending;
+  bool get hasTrials => _trials.isNotEmpty;
+  TrialType? get typeFilter => _typeFilter;
+  TrialStatus? get statusFilter => _statusFilter;
+  bool get hasActiveFilters => _typeFilter != null || _statusFilter != null;
 
   // Statistics
-  int get totalCount => _trials.length;
+  int get totalCount => _getFilteredTrials().length;
 
-  int get urgentCount => _trials.where(_isUrgent).length;
+  int get urgentCount => _getFilteredTrials().where(_isUrgent).length;
 
-  int get upcomingCount => _trials
+  int get upcomingCount => _getFilteredTrials()
       .where(
         (trial) =>
             !_isUrgent(trial) &&
@@ -47,7 +55,7 @@ class CourtDatesViewModel extends ReactiveViewModel {
       )
       .length;
 
-  int get completedCount => _trials.where(_isCompleted).length;
+  int get completedCount => _getFilteredTrials().where(_isCompleted).length;
 
   /// Initialize the viewmodel with case metadata.
   Future<void> initialize({
@@ -70,6 +78,82 @@ class CourtDatesViewModel extends ReactiveViewModel {
     }
   }
 
+  Future<TrialModel?> createTrial({
+    required TrialModel trial,
+    PlatformFile? counselBrief,
+    String? counselNotes,
+  }) async {
+    try {
+      setBusy(true);
+      final created = await _trialService.createTrial(trial);
+      if (created != null && counselBrief != null) {
+        await _trialService.uploadCounselBrief(
+          trialId: created.trialId,
+          file: counselBrief,
+          notes: counselNotes,
+        );
+      }
+      return created;
+    } catch (e) {
+      _errorMessage = 'Failed to create trial: $e';
+      notifyListeners();
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  Future<bool> updateTrial({
+    required TrialModel trial,
+    PlatformFile? counselBrief,
+    String? counselNotes,
+  }) async {
+    try {
+      setBusy(true);
+      final success = await _trialService.updateTrial(trial);
+      if (success && counselBrief != null) {
+        await _trialService.uploadCounselBrief(
+          trialId: trial.trialId,
+          file: counselBrief,
+          notes: counselNotes,
+        );
+      }
+      return success;
+    } catch (e) {
+      _errorMessage = 'Failed to update trial: $e';
+      notifyListeners();
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  Future<bool> deleteTrial(String trialId) async {
+    try {
+      setBusy(true);
+      return await _trialService.deleteTrial(trialId);
+    } catch (e) {
+      _errorMessage = 'Failed to delete trial: $e';
+      notifyListeners();
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  Future<bool> removeCounselBrief(String trialId) async {
+    try {
+      setBusy(true);
+      return await _trialService.clearCounselBrief(trialId);
+    } catch (e) {
+      _errorMessage = 'Failed to remove counsel brief: $e';
+      notifyListeners();
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
   /// Update sorting column/direction.
   void updateSorting(String column) {
     if (_sortColumn == column) {
@@ -84,6 +168,22 @@ class CourtDatesViewModel extends ReactiveViewModel {
   /// Clear error message.
   void clearError() {
     _errorMessage = null;
+    notifyListeners();
+  }
+
+  void setTypeFilter(TrialType? type) {
+    _typeFilter = type;
+    notifyListeners();
+  }
+
+  void setStatusFilter(TrialStatus? status) {
+    _statusFilter = status;
+    notifyListeners();
+  }
+
+  void resetFilters() {
+    _typeFilter = null;
+    _statusFilter = null;
     notifyListeners();
   }
 
@@ -122,7 +222,7 @@ class CourtDatesViewModel extends ReactiveViewModel {
   }
 
   List<TrialModel> _getSortedTrials() {
-    final sorted = List<TrialModel>.from(_trials);
+    final sorted = _getFilteredTrials();
 
     int compareByDate(TrialModel a, TrialModel b) {
       final dateCompare =
@@ -132,24 +232,32 @@ class CourtDatesViewModel extends ReactiveViewModel {
 
     switch (_sortColumn) {
       case 'type':
-        sorted.sort((a, b) => _sortAscending
-            ? a.type.name.compareTo(b.type.name)
-            : b.type.name.compareTo(a.type.name));
+        sorted.sort(
+          (a, b) => _sortAscending
+              ? a.type.name.compareTo(b.type.name)
+              : b.type.name.compareTo(a.type.name),
+        );
         break;
       case 'status':
-        sorted.sort((a, b) => _sortAscending
-            ? a.status.name.compareTo(b.status.name)
-            : b.status.name.compareTo(a.status.name));
+        sorted.sort(
+          (a, b) => _sortAscending
+              ? a.status.name.compareTo(b.status.name)
+              : b.status.name.compareTo(a.status.name),
+        );
         break;
       case 'correspondent':
-        sorted.sort((a, b) => _sortAscending
-            ? a.correspondentName.compareTo(b.correspondentName)
-            : b.correspondentName.compareTo(a.correspondentName));
+        sorted.sort(
+          (a, b) => _sortAscending
+              ? a.correspondentName.compareTo(b.correspondentName)
+              : b.correspondentName.compareTo(a.correspondentName),
+        );
         break;
       case 'court':
-        sorted.sort((a, b) => _sortAscending
-            ? a.courtName.compareTo(b.courtName)
-            : b.courtName.compareTo(a.courtName));
+        sorted.sort(
+          (a, b) => _sortAscending
+              ? a.courtName.compareTo(b.courtName)
+              : b.courtName.compareTo(a.courtName),
+        );
         break;
       case 'trialDate':
       default:
@@ -158,6 +266,15 @@ class CourtDatesViewModel extends ReactiveViewModel {
     }
 
     return sorted;
+  }
+
+  List<TrialModel> _getFilteredTrials() {
+    return _trials.where((trial) {
+      final matchesType = _typeFilter == null || trial.type == _typeFilter;
+      final matchesStatus =
+          _statusFilter == null || trial.status == _statusFilter;
+      return matchesType && matchesStatus;
+    }).toList();
   }
 
   void _setLoading(bool value) {

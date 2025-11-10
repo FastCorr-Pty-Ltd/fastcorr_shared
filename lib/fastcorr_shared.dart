@@ -37,7 +37,6 @@ export 'ui/document/document_viewmodel.dart';
 export 'ui/document/document_view_helper.dart';
 
 // Export court dates functionality
-export 'ui/court_dates/court_dates_tab.dart';
 export 'ui/court_dates/court_dates_viewmodel.dart';
 
 // Export map tracking functionality
