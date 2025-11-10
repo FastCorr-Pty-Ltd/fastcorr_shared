@@ -10,6 +10,7 @@ enum CourtDateType { trial, preTrial, motion, other }
 /// Model representing a court date
 class CourtDateModel {
   final String dateId;
+  final String trialId;
   final String caseId;
   final String caseTitle;
   final String orgId;
@@ -25,6 +26,7 @@ class CourtDateModel {
 
   const CourtDateModel({
     required this.dateId,
+    required this.trialId,
     required this.caseId,
     required this.caseTitle,
     required this.orgId,
@@ -44,6 +46,7 @@ class CourtDateModel {
     final data = doc.data() as Map<String, dynamic>;
     return CourtDateModel(
       dateId: doc.id,
+      trialId: data['trialId'] ?? '',
       caseId: data['caseId'] ?? '',
       caseTitle: data['caseTitle'] ?? '',
       orgId: data['orgId'] ?? '',
@@ -68,6 +71,7 @@ class CourtDateModel {
   /// Convert CourtDateModel to Map for Firestore
   Map<String, dynamic> toFirestore() {
     return {
+      'trialId': trialId,
       'caseId': caseId,
       'caseTitle': caseTitle,
       'orgId': orgId,
@@ -86,6 +90,7 @@ class CourtDateModel {
   /// Create a copy of this CourtDateModel with updated fields
   CourtDateModel copyWith({
     String? dateId,
+    String? trialId,
     String? caseId,
     String? caseTitle,
     String? orgId,
@@ -101,6 +106,7 @@ class CourtDateModel {
   }) {
     return CourtDateModel(
       dateId: dateId ?? this.dateId,
+      trialId: trialId ?? this.trialId,
       caseId: caseId ?? this.caseId,
       caseTitle: caseTitle ?? this.caseTitle,
       orgId: orgId ?? this.orgId,
@@ -178,6 +184,6 @@ class CourtDateModel {
 
   @override
   String toString() {
-    return 'CourtDateModel(dateId: $dateId, caseId: $caseId, caseTitle: $caseTitle, orgId: $orgId, description: $description, courtDate: $courtDate, dateType: $dateType, status: $status)';
+    return 'CourtDateModel(dateId: $dateId, trialId: $trialId, caseId: $caseId, caseTitle: $caseTitle, orgId: $orgId, description: $description, courtDate: $courtDate, dateType: $dateType, status: $status)';
   }
 }

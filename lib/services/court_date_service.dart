@@ -109,11 +109,13 @@ class CourtDateService {
     required String createdBy,
   }) async {
     final docRef = _getCourtDatesRef(caseId).doc();
+    final trialId = _firestore.collection('trials').doc().id;
 
     final now = DateTime.now();
 
     final courtDateModel = CourtDateModel(
       dateId: docRef.id,
+      trialId: trialId,
       orgId: orgId,
       caseId: caseId,
       caseTitle: caseTitle,
