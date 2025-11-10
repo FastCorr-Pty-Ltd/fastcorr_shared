@@ -8,7 +8,6 @@ library fastcorr_shared;
 // Export models
 export 'models/unified_case_message.dart';
 export 'models/upload_file_data.dart';
-export 'models/court_date_model.dart';
 export 'models/case_model.dart';
 export 'models/request_model.dart';
 export 'models/contact_model.dart';
@@ -23,7 +22,6 @@ export 'services/unified_case_communication_service.dart';
 export 'services/unified_status_sync_service.dart';
 export 'services/unified_case_state_sync_service.dart';
 export 'services/document_service.dart';
-export 'services/court_date_service.dart';
 export 'services/map_tracking_service.dart';
 
 // Export UI components
@@ -41,7 +39,6 @@ export 'ui/document/document_view_helper.dart';
 // Export court dates functionality
 export 'ui/court_dates/court_dates_tab.dart';
 export 'ui/court_dates/court_dates_viewmodel.dart';
-export 'ui/court_dates/add_court_date_dialog.dart';
 
 // Export map tracking functionality
 export 'ui/map_tracking/map_tracking_view.dart';

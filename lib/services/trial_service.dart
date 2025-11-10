@@ -10,8 +10,7 @@ import 'document_service.dart';
 
 /// Shared service for managing trial records.
 ///
-/// This service is intended to replace the remaining CourtDateModel usage by
-/// providing a unified CRUD layer around TrialModel that both the user and
+/// Provides a unified CRUD layer around `TrialModel` that both the user and
 /// admin applications can consume.
 class TrialService {
   TrialService({
