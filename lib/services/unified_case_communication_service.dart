@@ -301,6 +301,43 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     }
   }
 
+  /// Sanitize filename to prevent path traversal and malicious characters
+  /// Mirrors the litigation instruction upload sanitization for consistent behaviour
+  String _sanitizeFileName(String fileName) {
+    try {
+      String sanitized = Uri.decodeComponent(fileName);
+
+      sanitized = sanitized.replaceAll('../', '');
+      sanitized = sanitized.replaceAll('..\\', '');
+      sanitized = sanitized.replaceAll(RegExp(r'[\\/:]'), '_');
+      sanitized = sanitized.replaceAll(RegExp(r'\s+'), ' ').trim();
+      sanitized = sanitized.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '');
+
+      if (sanitized.isEmpty) {
+        sanitized = 'document';
+      }
+
+      if (sanitized.length > 200) {
+        final parts = sanitized.split('.');
+        if (parts.length > 1) {
+          final extension = parts.removeLast();
+          final maxBaseLength = 195;
+          final nameWithoutExt = parts.join('.');
+          final truncated = nameWithoutExt.length > maxBaseLength
+              ? nameWithoutExt.substring(0, maxBaseLength)
+              : nameWithoutExt;
+          sanitized = '$truncated.$extension';
+        } else {
+          sanitized = sanitized.substring(0, 200);
+        }
+      }
+
+      return sanitized;
+    } catch (_) {
+      return fileName;
+    }
+  }
+
   /// Upload document attachment
   Future<DocumentAttachment> uploadDocument({
     required String caseId,
@@ -311,16 +348,20 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     required String uploadedBy,
   }) async {
     try {
-      // Decode and sanitize filename for cross-platform consistency
-      final safeFileName = Uri.decodeComponent(fileName).replaceAll(' ', '_');
-      
-      // Create unique timestamp folder to prevent overwrites
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      
+      // Preserve original filename for display while sanitizing storage path
+      final originalFileName = fileName;
+      final safeFileName = _sanitizeFileName(fileName);
+
+      log('[UnifiedCaseCommunicationService] Original filename: $originalFileName');
+      log('[UnifiedCaseCommunicationService] Sanitized filename: $safeFileName');
+
+      // Create unique UUID for this upload
       final attachmentId = _uuid.v4();
-      
-      // Store with timestamp folder and preserve original filename
-      final storagePath = 'cases/$caseId/documents/$timestamp/$safeFileName';
+
+      // Store with UUID subfolder to preserve clean filename
+      final storagePath = 'cases/$caseId/documents/$attachmentId/$safeFileName';
+
+      log('[UnifiedCaseCommunicationService] 📁 Storage path (canonical): $storagePath');
 
       final ref = _storage.ref().child(storagePath);
       final uploadTask = ref.putData(Uint8List.fromList(fileBytes));
@@ -329,7 +370,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
 
       final attachment = DocumentAttachment(
         id: attachmentId,
-        fileName: safeFileName,
+        fileName: originalFileName,
         fileUrl: downloadUrl,
         fileType: fileType,
         fileSize: fileBytes.length,

@@ -15,9 +15,11 @@ class DocumentService {
       return;
     }
 
-    log('Downloading file: ${file.fileName} from URL: ${file.fileUrl}');
+    final sanitizedFileName = _sanitizeFileName(file.fileName);
+
+    log('Downloading file: $sanitizedFileName from URL: ${file.fileUrl}');
     html.AnchorElement(href: file.fileUrl)
-      ..setAttribute('download', file.fileName)
+      ..setAttribute('download', sanitizedFileName)
       ..click();
   }
 
@@ -28,7 +30,7 @@ class DocumentService {
   Future<String> uploadFileToStorage(PlatformFile file) async {
     try {
       // Decode and sanitize filename for cross-platform consistency
-      final fileName = Uri.decodeComponent(file.name).replaceAll(' ', '_');
+      final fileName = _sanitizeFileName(file.name);
 
       // Create unique timestamp folder to prevent overwrites
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -52,6 +54,41 @@ class DocumentService {
       return downloadUrl;
     } catch (e) {
       throw Exception('Failed to upload file: $e');
+    }
+  }
+
+  String _sanitizeFileName(String fileName) {
+    try {
+      String sanitized = Uri.decodeComponent(fileName);
+
+      sanitized = sanitized.replaceAll('../', '');
+      sanitized = sanitized.replaceAll('..\\', '');
+      sanitized = sanitized.replaceAll(RegExp(r'[\\/:]'), '_');
+      sanitized = sanitized.replaceAll(RegExp(r'\s+'), ' ').trim();
+      sanitized = sanitized.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '');
+
+      if (sanitized.isEmpty) {
+        sanitized = 'document';
+      }
+
+      if (sanitized.length > 200) {
+        final parts = sanitized.split('.');
+        if (parts.length > 1) {
+          final extension = parts.removeLast();
+          final maxBaseLength = 195;
+          final nameWithoutExt = parts.join('.');
+          final truncated = nameWithoutExt.length > maxBaseLength
+              ? nameWithoutExt.substring(0, maxBaseLength)
+              : nameWithoutExt;
+          sanitized = '$truncated.$extension';
+        } else {
+          sanitized = sanitized.substring(0, 200);
+        }
+      }
+
+      return sanitized;
+    } catch (_) {
+      return fileName;
     }
   }
 }
