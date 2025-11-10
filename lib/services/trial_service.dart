@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/trial_model.dart';
@@ -27,6 +28,18 @@ class TrialService {
 
   CollectionReference<Map<String, dynamic>> get _trialsRef =>
       _firestore.collection('trials');
+
+  @protected
+  FirebaseFirestore get firestore => _firestore;
+
+  @protected
+  CollectionReference<Map<String, dynamic>> get trialsRef => _trialsRef;
+
+  @protected
+  DocumentService get documentService => _documentService;
+
+  @protected
+  Uuid get uuid => _uuid;
 
   /// Get a single trial by its Firestore document ID.
   Future<TrialModel?> getTrialById(String trialId) async {
@@ -121,6 +134,61 @@ class TrialService {
         stackTrace: stackTrace,
       );
       return const Stream.empty();
+    }
+  }
+
+  /// Get all trials assigned to a specific lawyer.
+  Future<List<TrialModel>> getTrialsByLawyerId({
+    required String lawyerId,
+    String? orgId,
+  }) async {
+    if (lawyerId.isEmpty) return [];
+
+    try {
+      Query<Map<String, dynamic>> query = trialsRef.where(
+        'lawyerId',
+        isEqualTo: lawyerId,
+      );
+
+      if (orgId != null && orgId.isNotEmpty) {
+        query = query.where('orgId', isEqualTo: orgId);
+      }
+
+      final snapshot = await query.get();
+      return snapshot.docs.map(TrialModel.fromSnapshot).toList();
+    } catch (e, stackTrace) {
+      log(
+        '[TrialService] Error getting trials for lawyer $lawyerId: $e',
+        stackTrace: stackTrace,
+      );
+      return [];
+    }
+  }
+
+  /// Filter trials for a lawyer by type and organisation.
+  Future<List<TrialModel>> getTrialsByType({
+    required String lawyerId,
+    required String orgId,
+    required TrialType type,
+    bool descending = true,
+  }) async {
+    if (lawyerId.isEmpty || orgId.isEmpty) return [];
+
+    try {
+      final snapshot = await trialsRef
+          .where('lawyerId', isEqualTo: lawyerId)
+          .where('orgId', isEqualTo: orgId)
+          .where('type', isEqualTo: type.name)
+          .orderBy('trialDate', descending: descending)
+          .get();
+
+      return snapshot.docs.map(TrialModel.fromSnapshot).toList();
+    } catch (e, stackTrace) {
+      log(
+        '[TrialService] Error getting ${type.name} trials for lawyer $lawyerId / org $orgId: $e',
+        stackTrace: stackTrace,
+      );
+      return [];
     }
   }
 
