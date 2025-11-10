@@ -109,7 +109,7 @@ class CourtDatesTab extends StatelessWidget {
         children: [
           Icon(IconlyBroken.danger, color: color.error),
           const SizedBox(width: 8),
-          Expanded(
+          Flexible(
             child: Text(
               error,
               style: txtTheme.bodyMedium!.copyWith(
@@ -129,7 +129,7 @@ class CourtDatesTab extends StatelessWidget {
   ) {
     return Row(
       children: [
-        Expanded(
+        Flexible(
           child: _buildOverviewCard(
             'Total',
             viewModel.totalCount.toString(),
@@ -140,7 +140,7 @@ class CourtDatesTab extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        Expanded(
+        Flexible(
           child: _buildOverviewCard(
             'Urgent',
             viewModel.urgentCount.toString(),
@@ -151,7 +151,7 @@ class CourtDatesTab extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        Expanded(
+        Flexible(
           child: _buildOverviewCard(
             'Upcoming',
             viewModel.upcomingCount.toString(),
@@ -162,7 +162,7 @@ class CourtDatesTab extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        Expanded(
+        Flexible(
           child: _buildOverviewCard(
             'Completed',
             viewModel.completedCount.toString(),
@@ -224,128 +224,136 @@ class CourtDatesTab extends StatelessWidget {
   ) {
     if (trials.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: color.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: color.outline.withValues(alpha: 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: DataTable2(
-        columnSpacing: 16,
-        horizontalMargin: 16,
-        minWidth: 900,
-        headingRowColor: WidgetStateProperty.all(color.surfaceContainerHighest),
-        headingRowHeight: 56,
-        dataRowHeight: 68,
-        border: TableBorder.all(
-          color: color.outline.withValues(alpha: 0.1),
+    return SizedBox(
+      height: 520,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color.surface,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: color.outline.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        columns: [
-          DataColumn2(
-            label: Text('Type', style: _headingStyle(txtTheme, color)),
-            size: ColumnSize.S,
+        child: DataTable2(
+          columnSpacing: 16,
+          horizontalMargin: 16,
+          minWidth: 900,
+          headingRowColor: WidgetStateProperty.all(
+            color.surfaceContainerHighest,
           ),
-          DataColumn2(
-            label: Text('Status', style: _headingStyle(txtTheme, color)),
-            size: ColumnSize.S,
+          headingRowHeight: 56,
+          dataRowHeight: 68,
+          border: TableBorder.all(
+            color: color.outline.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
-          DataColumn2(
-            label: Text('Date & Time', style: _headingStyle(txtTheme, color)),
-            size: ColumnSize.M,
-          ),
-          DataColumn2(
-            label: Text('Court', style: _headingStyle(txtTheme, color)),
-            size: ColumnSize.M,
-          ),
-          DataColumn2(
-            label: Text('Correspondent', style: _headingStyle(txtTheme, color)),
-            size: ColumnSize.M,
-          ),
-          DataColumn2(
-            label: Text(
-              'Opposing Attorney',
-              style: _headingStyle(txtTheme, color),
+          columns: [
+            DataColumn2(
+              label: Text('Type', style: _headingStyle(txtTheme, color)),
+              size: ColumnSize.S,
             ),
-            size: ColumnSize.M,
-          ),
-          DataColumn2(
-            label: Text(
-              'Outcome / Notes',
-              style: _headingStyle(txtTheme, color),
+            DataColumn2(
+              label: Text('Status', style: _headingStyle(txtTheme, color)),
+              size: ColumnSize.S,
             ),
-            size: ColumnSize.L,
-          ),
-        ],
-        rows: trials.map((trial) {
-          final trialDate = _trialDate(trial);
-          final daysUntil = trialDate.difference(DateTime.now()).inDays;
-          final isPast = trialDate.isBefore(DateTime.now());
+            DataColumn2(
+              label: Text('Date & Time', style: _headingStyle(txtTheme, color)),
+              size: ColumnSize.M,
+            ),
+            DataColumn2(
+              label: Text('Court', style: _headingStyle(txtTheme, color)),
+              size: ColumnSize.M,
+            ),
+            DataColumn2(
+              label: Text(
+                'Correspondent',
+                style: _headingStyle(txtTheme, color),
+              ),
+              size: ColumnSize.M,
+            ),
+            DataColumn2(
+              label: Text(
+                'Opposing Attorney',
+                style: _headingStyle(txtTheme, color),
+              ),
+              size: ColumnSize.M,
+            ),
+            DataColumn2(
+              label: Text(
+                'Outcome / Notes',
+                style: _headingStyle(txtTheme, color),
+              ),
+              size: ColumnSize.L,
+            ),
+          ],
+          rows: trials.map((trial) {
+            final trialDate = _trialDate(trial);
+            final daysUntil = trialDate.difference(DateTime.now()).inDays;
+            final isPast = trialDate.isBefore(DateTime.now());
 
-          return DataRow2(
-            color: WidgetStateProperty.all(
-              isPast
-                  ? color.surfaceContainerHighest.withValues(alpha: 0.35)
-                  : null,
-            ),
-            cells: [
-              DataCell(_buildTypeChip(trial.type, txtTheme)),
-              DataCell(_buildStatusChip(trial.status, color, txtTheme)),
-              DataCell(_buildDateCell(trialDate, daysUntil, color, txtTheme)),
-              DataCell(
-                Text(
-                  trial.courtName,
-                  style: txtTheme.bodyMedium!.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: isPast
-                        ? color.onSurface.withValues(alpha: 0.6)
-                        : color.onSurface,
+            return DataRow2(
+              color: WidgetStateProperty.all(
+                isPast
+                    ? color.surfaceContainerHighest.withValues(alpha: 0.35)
+                    : null,
+              ),
+              cells: [
+                DataCell(_buildTypeChip(trial.type, txtTheme)),
+                DataCell(_buildStatusChip(trial.status, color, txtTheme)),
+                DataCell(_buildDateCell(trialDate, daysUntil, color, txtTheme)),
+                DataCell(
+                  Text(
+                    trial.courtName,
+                    style: txtTheme.bodyMedium!.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: isPast
+                          ? color.onSurface.withValues(alpha: 0.6)
+                          : color.onSurface,
+                    ),
                   ),
                 ),
-              ),
-              DataCell(
-                Text(
-                  trial.correspondentName.isNotEmpty
-                      ? trial.correspondentName
-                      : 'Unassigned',
-                  style: txtTheme.bodyMedium!.copyWith(
-                    color: trial.correspondentName.isEmpty
-                        ? color.onSurface.withValues(alpha: 0.5)
-                        : color.onSurface,
+                DataCell(
+                  Text(
+                    trial.correspondentName.isNotEmpty
+                        ? trial.correspondentName
+                        : 'Unassigned',
+                    style: txtTheme.bodyMedium!.copyWith(
+                      color: trial.correspondentName.isEmpty
+                          ? color.onSurface.withValues(alpha: 0.5)
+                          : color.onSurface,
+                    ),
                   ),
                 ),
-              ),
-              DataCell(
-                Text(
-                  trial.opposingAttorney.isNotEmpty
-                      ? trial.opposingAttorney
-                      : 'Not specified',
-                  style: txtTheme.bodyMedium!.copyWith(
-                    color: color.onSurface.withValues(alpha: 0.8),
+                DataCell(
+                  Text(
+                    trial.opposingAttorney.isNotEmpty
+                        ? trial.opposingAttorney
+                        : 'Not specified',
+                    style: txtTheme.bodyMedium!.copyWith(
+                      color: color.onSurface.withValues(alpha: 0.8),
+                    ),
                   ),
                 ),
-              ),
-              DataCell(
-                Text(
-                  (trial.trialOutcome?.isNotEmpty ?? false)
-                      ? trial.trialOutcome!
-                      : 'No outcome recorded',
-                  style: txtTheme.bodyMedium!.copyWith(
-                    color: color.onSurface.withValues(alpha: 0.75),
+                DataCell(
+                  Text(
+                    (trial.trialOutcome?.isNotEmpty ?? false)
+                        ? trial.trialOutcome!
+                        : 'No outcome recorded',
+                    style: txtTheme.bodyMedium!.copyWith(
+                      color: color.onSurface.withValues(alpha: 0.75),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          );
-        }).toList(),
+              ],
+            );
+          }).toList(),
+        ),
       ),
     );
   }
