@@ -339,7 +339,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   }
 
   /// Upload document attachment
-  Future<DocumentAttachment> uploadDocument({
+  Future<String> uploadDocument({
     required String caseId,
     required String orgId,
     required String fileName,
@@ -352,8 +352,12 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
       final originalFileName = fileName;
       final safeFileName = _sanitizeFileName(fileName);
 
-      log('[UnifiedCaseCommunicationService] Original filename: $originalFileName');
-      log('[UnifiedCaseCommunicationService] Sanitized filename: $safeFileName');
+      log(
+        '[UnifiedCaseCommunicationService] Original filename: $originalFileName',
+      );
+      log(
+        '[UnifiedCaseCommunicationService] Sanitized filename: $safeFileName',
+      );
 
       // Create unique UUID for this upload
       final attachmentId = _uuid.v4();
@@ -361,25 +365,17 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
       // Store with UUID subfolder to preserve clean filename
       final storagePath = 'cases/$caseId/documents/$attachmentId/$safeFileName';
 
-      log('[UnifiedCaseCommunicationService] 📁 Storage path (canonical): $storagePath');
+      log(
+        '[UnifiedCaseCommunicationService] 📁 Storage path (canonical): $storagePath',
+      );
 
       final ref = _storage.ref().child(storagePath);
       final uploadTask = ref.putData(Uint8List.fromList(fileBytes));
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      final attachment = DocumentAttachment(
-        id: attachmentId,
-        fileName: originalFileName,
-        fileUrl: downloadUrl,
-        fileType: fileType,
-        fileSize: fileBytes.length,
-        uploadedAt: DateTime.now(),
-        uploadedBy: uploadedBy,
-      );
-
       log('✅ Document uploaded: $attachmentId');
-      return attachment;
+      return downloadUrl;
     } catch (e) {
       log('❌ Error uploading document: $e');
       rethrow;

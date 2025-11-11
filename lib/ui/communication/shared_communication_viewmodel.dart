@@ -355,7 +355,7 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
       for (final attachment in _composeAttachments) {
         if (attachment.fileUrl.isEmpty) {
           // Upload the file
-          final uploadedAttachment = await _commService.uploadDocument(
+          final uploadedAttachmentUrl = await _commService.uploadDocument(
             caseId: _caseId!,
             orgId: _orgId!,
             fileName: attachment.fileName,
@@ -363,6 +363,16 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
             fileType: attachment.fileType,
             uploadedBy: _currentUserId!,
           );
+          final uploadedAttachment = DocumentAttachment(
+            id: attachment.id,
+            fileName: attachment.fileName,
+            fileUrl: uploadedAttachmentUrl,
+            fileType: attachment.fileType,
+            fileSize: attachment.fileSize,
+            uploadedAt: attachment.uploadedAt,
+            uploadedBy: attachment.uploadedBy,
+          );
+
           uploadedAttachments.add(uploadedAttachment);
         } else {
           uploadedAttachments.add(attachment);
