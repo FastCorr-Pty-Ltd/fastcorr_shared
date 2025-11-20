@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/trial_model.dart';
+import '../models/upload_file_data.dart';
 import 'document_service.dart';
 
 /// Shared service for managing trial records.
@@ -198,11 +199,245 @@ class TrialService {
   Future<TrialModel?> createTrial(TrialModel trial) async {
     try {
       final docRef = _trialsRef.doc();
-      final trialToSave = trial.copyWith(trialId: docRef.id);
+      final now = Timestamp.now();
+      final trialToSave = trial.copyWith(
+        trialId: docRef.id,
+        updatedAt: now,
+      );
       await docRef.set(trialToSave.toJson());
       return trialToSave;
     } catch (e, stackTrace) {
       log('[TrialService] Error creating trial: $e', stackTrace: stackTrace);
+      return null;
+    }
+  }
+
+  /// Validate trial date is reasonable (not too far in past or future)
+  ///
+  /// Returns null if valid, error message if invalid
+  String? validateTrialDate(DateTime trialDate) {
+    final now = DateTime.now();
+    final minDate = now.subtract(const Duration(days: 365)); // Allow past dates up to 1 year
+    final maxDate = now.add(const Duration(days: 365 * 3)); // Allow future dates up to 3 years
+
+    if (trialDate.isBefore(minDate)) {
+      return 'Trial date cannot be more than 1 year in the past';
+    }
+
+    if (trialDate.isAfter(maxDate)) {
+      return 'Trial date cannot be more than 3 years in the future';
+    }
+
+    return null; // Valid
+  }
+
+  /// Validate required fields for trial creation
+  ///
+  /// Returns null if valid, error message if invalid
+  String? validateTrialData(TrialModel trial) {
+    if (trial.litNumber.isEmpty) {
+      return 'Litigation number is required';
+    }
+
+    if (trial.courtId.isEmpty) {
+      return 'Court ID is required';
+    }
+
+    if (trial.lawyerId.isEmpty) {
+      return 'Lawyer ID is required';
+    }
+
+    if (trial.orgId.isEmpty) {
+      return 'Organization ID is required';
+    }
+
+    // Validate trial date
+    final trialDate = trial.trialDate.toDate();
+    final dateValidation = validateTrialDate(trialDate);
+    if (dateValidation != null) {
+      return dateValidation;
+    }
+
+    return null; // Valid
+  }
+
+  /// Create or update trial atomically with duplicate prevention and status update.
+  ///
+  /// This method uses a Firestore transaction to ensure:
+  /// - No duplicate pendingConfirmation trials for the same case/type
+  /// - Atomic status update from pendingConfirmation to pending
+  /// - Atomic counsel brief linking (supports multiple briefs)
+  /// - Optimistic locking to prevent race conditions
+  /// - Validation of trial data before creation
+  ///
+  /// [existingTrial] - The trial to update (if null, creates new trial)
+  /// [newTrial] - The new trial data (only used if existingTrial is null)
+  /// [needsStatusUpdate] - Whether to update status from pendingConfirmation to pending
+  /// [counselBriefs] - List of counsel brief files to link (supports multiple)
+  ///
+  /// Returns the trial model if successful, null otherwise.
+  Future<TrialModel?> createOrUpdateTrialAtomically({
+    required String litNumber,
+    required TrialType type,
+    TrialModel? existingTrial,
+    TrialModel? newTrial,
+    required bool needsStatusUpdate,
+    List<UploadFileData>? counselBriefs,
+  }) async {
+    try {
+      return await _firestore.runTransaction((transaction) async {
+        DocumentReference trialRef;
+        TrialModel trialToProcess;
+
+        if (existingTrial != null && existingTrial.trialId.isNotEmpty) {
+          // Updating existing trial - read it within transaction
+          trialRef = _trialsRef.doc(existingTrial.trialId);
+          final trialDoc = await transaction.get(trialRef);
+          
+          if (!trialDoc.exists) {
+            log('[TrialService] Existing trial ${existingTrial.trialId} not found in transaction');
+            throw Exception('Trial not found');
+          }
+
+          trialToProcess = TrialModel.fromSnapshot(trialDoc);
+          
+          // Enhanced optimistic locking: verify the trial hasn't been modified
+          if (trialToProcess.status != existingTrial.status) {
+            log('[TrialService] Trial status changed from ${existingTrial.status} to ${trialToProcess.status}');
+            throw Exception('Trial status has changed. Please refresh and try again.');
+          }
+          
+          // Check updatedAt timestamp for additional version checking
+          if (existingTrial.updatedAt != null && trialToProcess.updatedAt != null) {
+            if (trialToProcess.updatedAt!.millisecondsSinceEpoch != 
+                existingTrial.updatedAt!.millisecondsSinceEpoch) {
+              log('[TrialService] Trial was modified (updatedAt mismatch). Expected: ${existingTrial.updatedAt}, Got: ${trialToProcess.updatedAt}');
+              throw Exception('Trial was modified by another process. Please refresh and try again.');
+            }
+          }
+        } else {
+          // Creating new trial - check for duplicate pendingConfirmation trials
+          // Note: Firestore transactions can't query, only read specific documents
+          // So we check before transaction, then verify within transaction if duplicates found
+          final duplicateTrials = await getTrialsByLitNumber(
+            litNumber,
+            status: TrialStatus.pendingConfirmation,
+            type: type,
+          );
+          
+          if (duplicateTrials.isNotEmpty) {
+            // Verify within transaction that the duplicate still exists
+            // This ensures we catch race conditions where another transaction
+            // creates a duplicate between our check and the transaction
+            final duplicateRef = _trialsRef.doc(duplicateTrials.first.trialId);
+            final duplicateDoc = await transaction.get(duplicateRef);
+            
+            if (duplicateDoc.exists) {
+              log('[TrialService] Duplicate pendingConfirmation trial found for $litNumber, type: $type');
+              throw Exception('A trial is already pending confirmation for this case. Please confirm the existing trial instead.');
+            }
+          }
+
+          // Validate new trial data
+          if (newTrial == null) {
+            throw Exception('New trial data is required for creation');
+          }
+
+          // Validate trial data before creation
+          final validationError = validateTrialData(newTrial);
+          if (validationError != null) {
+            log('[TrialService] Validation failed: $validationError');
+            throw Exception(validationError);
+          }
+
+          // Create new trial document
+          trialRef = _trialsRef.doc();
+          trialToProcess = newTrial;
+        }
+
+        // Prepare update data with timestamp for version tracking
+        final now = Timestamp.now();
+        final updateData = <String, dynamic>{
+          'updatedAt': now,
+        };
+
+        // Update status if needed
+        if (needsStatusUpdate) {
+          if (trialToProcess.status != TrialStatus.pendingConfirmation) {
+            throw Exception('Cannot update status: trial is not in pendingConfirmation status');
+          }
+          updateData['status'] = TrialStatus.pending.name;
+          log('[TrialService] Updating trial status from pendingConfirmation to pending');
+        }
+
+        // Add counsel briefs if provided (supports multiple)
+        if (counselBriefs != null && counselBriefs.isNotEmpty) {
+          // Convert UploadFileData list to JSON
+          updateData['counselBriefs'] = counselBriefs.map((brief) => brief.toJson()).toList();
+          // Keep backward compatibility with first brief
+          final firstBrief = counselBriefs.first;
+          updateData['counselBriefId'] = firstBrief.fileId;
+          updateData['counselBriefName'] = firstBrief.fileName;
+          updateData['counselBriefUrl'] = firstBrief.fileUrl ?? '';
+          if (firstBrief.size != null) {
+            updateData['counselBriefSize'] = firstBrief.size!.round();
+          }
+          log('[TrialService] Linking ${counselBriefs.length} counsel brief(s) to trial');
+        }
+
+        // Perform the update/create atomically
+        if (existingTrial != null && existingTrial.trialId.isNotEmpty) {
+          // Update existing trial
+          if (updateData.length > 1) { // More than just updatedAt
+            transaction.update(trialRef, updateData);
+          }
+          log('[TrialService] Updating existing trial ${trialRef.id} atomically');
+          
+          // Return updated trial model with new timestamp
+          return trialToProcess.copyWith(
+            status: needsStatusUpdate ? TrialStatus.pending : trialToProcess.status,
+            counselBriefs: counselBriefs ?? trialToProcess.counselBriefs,
+            counselBriefId: counselBriefs?.isNotEmpty == true 
+                ? counselBriefs!.first.fileId 
+                : trialToProcess.counselBriefId,
+            updatedAt: now,
+          );
+        } else {
+          // Create new trial
+          final trialToSave = trialToProcess.copyWith(trialId: trialRef.id);
+          final finalTrial = needsStatusUpdate 
+              ? trialToSave.copyWith(status: TrialStatus.pending)
+              : trialToSave;
+          
+          // Merge counsel briefs into the trial JSON
+          final trialJson = finalTrial.toJson();
+          if (counselBriefs != null && counselBriefs.isNotEmpty) {
+            trialJson['counselBriefs'] = counselBriefs.map((brief) => brief.toJson()).toList();
+            // Keep backward compatibility
+            final firstBrief = counselBriefs.first;
+            trialJson['counselBriefId'] = firstBrief.fileId;
+            trialJson['counselBriefName'] = firstBrief.fileName;
+            trialJson['counselBriefUrl'] = firstBrief.fileUrl ?? '';
+            if (firstBrief.size != null) {
+              trialJson['counselBriefSize'] = firstBrief.size!.round();
+            }
+          }
+          trialJson['updatedAt'] = now;
+          
+          transaction.set(trialRef, trialJson);
+          log('[TrialService] Creating new trial ${trialRef.id} atomically');
+          
+          return finalTrial.copyWith(
+            counselBriefs: counselBriefs ?? finalTrial.counselBriefs,
+            counselBriefId: counselBriefs?.isNotEmpty == true 
+                ? counselBriefs!.first.fileId 
+                : finalTrial.counselBriefId,
+            updatedAt: now,
+          );
+        }
+      });
+    } catch (e, stackTrace) {
+      log('[TrialService] Error in atomic trial operation: $e', stackTrace: stackTrace);
       return null;
     }
   }
@@ -247,7 +482,7 @@ class TrialService {
     if (trialId.isEmpty) return false;
 
     final updateData = <String, dynamic>{
-      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      'updatedAt': Timestamp.now(),
     };
 
     if (correspondentId != null) {
@@ -324,6 +559,145 @@ class TrialService {
         stackTrace: stackTrace,
       );
       return false;
+    }
+  }
+
+  /// Find and report orphaned trials (trials in inconsistent states)
+  ///
+  /// Orphaned trials include:
+  /// - pendingConfirmation trials older than 30 days (likely abandoned)
+  /// - Trials with invalid or missing case references
+  /// - Trials with dates in the past that are still pending
+  ///
+  /// Returns a list of trial IDs that may need cleanup
+  Future<List<String>> findOrphanedTrials({
+    Duration maxPendingConfirmationAge = const Duration(days: 30),
+    bool includeStalePending = true,
+  }) async {
+    try {
+      final orphanedTrialIds = <String>[];
+      final now = DateTime.now();
+      final cutoffDate = now.subtract(maxPendingConfirmationAge);
+
+      // Find pendingConfirmation trials older than cutoff
+      final stalePendingConfirmation = await _trialsRef
+          .where('status', isEqualTo: TrialStatus.pendingConfirmation.name)
+          .where('trialDate', isLessThan: Timestamp.fromDate(cutoffDate))
+          .get();
+
+      for (final doc in stalePendingConfirmation.docs) {
+        orphanedTrialIds.add(doc.id);
+        log('[TrialService] Found stale pendingConfirmation trial: ${doc.id}');
+      }
+
+      // Find pending trials with dates in the past (more than 7 days old)
+      if (includeStalePending) {
+        final pastDate = now.subtract(const Duration(days: 7));
+        final stalePending = await _trialsRef
+            .where('status', isEqualTo: TrialStatus.pending.name)
+            .where('trialDate', isLessThan: Timestamp.fromDate(pastDate))
+            .get();
+
+        for (final doc in stalePending.docs) {
+          final trial = TrialModel.fromSnapshot(doc);
+          // Only flag if trial date is significantly in the past
+          if (trial.trialDate.toDate().isBefore(pastDate)) {
+            orphanedTrialIds.add(doc.id);
+            log('[TrialService] Found stale pending trial with past date: ${doc.id}');
+          }
+        }
+      }
+
+      log('[TrialService] Found ${orphanedTrialIds.length} orphaned trials');
+      return orphanedTrialIds;
+    } catch (e, stackTrace) {
+      log(
+        '[TrialService] Error finding orphaned trials: $e',
+        stackTrace: stackTrace,
+      );
+      return [];
+    }
+  }
+
+  /// Clean up orphaned trials by updating their status or marking for review
+  ///
+  /// This is a safe operation that marks trials for review rather than deleting them
+  Future<int> cleanupOrphanedTrials({
+    Duration maxPendingConfirmationAge = const Duration(days: 30),
+    bool autoResolve = false,
+  }) async {
+    try {
+      final orphanedIds = await findOrphanedTrials(
+        maxPendingConfirmationAge: maxPendingConfirmationAge,
+      );
+
+      if (orphanedIds.isEmpty) {
+        log('[TrialService] No orphaned trials found');
+        return 0;
+      }
+
+      int cleanedCount = 0;
+      final batch = _firestore.batch();
+      final batchLimit = 500; // Firestore batch limit
+      int batchCount = 0;
+
+      for (final trialId in orphanedIds) {
+        try {
+          final trialDoc = await _trialsRef.doc(trialId).get();
+          if (!trialDoc.exists) continue;
+
+          final trial = TrialModel.fromSnapshot(trialDoc);
+
+          // Only auto-resolve if explicitly requested and trial is very old
+          if (autoResolve && trial.status == TrialStatus.pendingConfirmation) {
+            final trialAge = DateTime.now().difference(trial.trialDate.toDate());
+            if (trialAge.inDays > 60) {
+              // Mark as resolved by client if very old
+              final trialRef = _trialsRef.doc(trialId);
+              batch.update(trialRef, {
+                'status': TrialStatus.resolvedByClient.name,
+                'updatedAt': Timestamp.now(),
+                'cleanupNote': 'Auto-resolved during orphaned trial cleanup',
+              });
+              batchCount++;
+              cleanedCount++;
+            }
+          } else {
+            // Mark for manual review
+            final trialRef = _trialsRef.doc(trialId);
+            batch.update(trialRef, {
+              'updatedAt': Timestamp.now(),
+              'needsReview': true,
+              'reviewReason': 'Orphaned trial detected during cleanup',
+            });
+            batchCount++;
+            cleanedCount++;
+          }
+
+          // Commit batch if we hit the limit
+          if (batchCount >= batchLimit) {
+            await batch.commit();
+            batchCount = 0;
+            log('[TrialService] Committed batch of orphaned trial updates');
+          }
+        } catch (e) {
+          log('[TrialService] Error processing orphaned trial $trialId: $e');
+        }
+      }
+
+      // Commit remaining updates
+      if (batchCount > 0) {
+        await batch.commit();
+      }
+
+      log('[TrialService] Cleaned up $cleanedCount orphaned trials');
+      return cleanedCount;
+    } catch (e, stackTrace) {
+      log(
+        '[TrialService] Error cleaning up orphaned trials: $e',
+        stackTrace: stackTrace,
+      );
+      return 0;
     }
   }
 

@@ -177,23 +177,6 @@ class CourtDatesViewModel extends ReactiveViewModel {
     }
   }
 
-  /// Get the phase hint for a trial type
-  int getPhaseForTrialType(TrialType type) {
-    switch (type) {
-      case TrialType.motion:
-        return 6;
-      case TrialType.trial:
-      case TrialType.preTrial:
-        return 5;
-    }
-  }
-
-  /// Get phase hint message
-  String getPhaseHintMessage(TrialType type) {
-    final phase = getPhaseForTrialType(type);
-    return 'Please proceed to Phase $phase services to upload your counsel brief and complete the trial setup.';
-  }
-
   /// Update sorting column/direction.
   void updateSorting(String column) {
     if (_sortColumn == column) {
