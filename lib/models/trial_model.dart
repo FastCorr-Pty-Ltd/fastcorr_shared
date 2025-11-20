@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/utils/utils.dart';
 
-enum TrialStatus { pending, urgent, proceeding, postponed, settled }
+enum TrialStatus { pending, pendingConfirmation, urgent, proceeding, postponed, settled, resolvedByClient }
 
 enum TrialType { trial, preTrial, motion }
 
