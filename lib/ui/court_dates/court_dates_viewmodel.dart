@@ -154,6 +154,46 @@ class CourtDatesViewModel extends ReactiveViewModel {
     }
   }
 
+  /// Check if a trial needs confirmation
+  bool needsConfirmation(TrialModel trial) {
+    return trial.status == TrialStatus.pendingConfirmation;
+  }
+
+  /// Confirm trial - handle ourselves (resolved by client)
+  Future<bool> confirmTrialHandleOurselves(String trialId) async {
+    try {
+      setBusy(true);
+      final success = await _trialService.patchTrial(
+        trialId,
+        status: TrialStatus.resolvedByClient,
+      );
+      return success;
+    } catch (e) {
+      _errorMessage = 'Failed to confirm trial: $e';
+      notifyListeners();
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /// Get the phase hint for a trial type
+  int getPhaseForTrialType(TrialType type) {
+    switch (type) {
+      case TrialType.motion:
+        return 6;
+      case TrialType.trial:
+      case TrialType.preTrial:
+        return 5;
+    }
+  }
+
+  /// Get phase hint message
+  String getPhaseHintMessage(TrialType type) {
+    final phase = getPhaseForTrialType(type);
+    return 'Please proceed to Phase $phase services to upload your counsel brief and complete the trial setup.';
+  }
+
   /// Update sorting column/direction.
   void updateSorting(String column) {
     if (_sortColumn == column) {
