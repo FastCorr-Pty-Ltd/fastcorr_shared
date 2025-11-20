@@ -152,8 +152,8 @@ class TrialModel {
       'opposingAttorney': opposingAttorney,
       'opposingAttorneyId': opposingAttorneyId,
       'counselBriefId': counselBriefId,
-      if (counselBriefs != null)
-        'counselBriefs': counselBriefs!.map((e) => e.toJson()).toList(),
+
+      'counselBriefs': counselBriefs?.map((e) => e.toJson()).toList(),
       'scale': scale,
       'type': type.name,
       'courtName': courtName,
