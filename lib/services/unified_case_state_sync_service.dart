@@ -7,7 +7,7 @@ class UnifiedCaseStateSyncService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Collection references
-  CollectionReference get _orgRef => _firestore.collection('organisations');
+  CollectionReference get _casesRef => _firestore.collection('cases');
   CollectionReference get _caseStateSyncRef =>
       _firestore.collection('case_state_sync_logs');
   CollectionReference get _notificationsRef =>
@@ -41,7 +41,7 @@ class UnifiedCaseStateSyncService {
       );
 
       // Update case phase in both apps
-      final caseRef = _orgRef.doc(orgId).collection('cases').doc(caseId);
+      final caseRef = _casesRef.doc(caseId);
       await caseRef.update({
         'phase': newPhase,
         'lastPhaseUpdate': FieldValue.serverTimestamp(),
@@ -99,7 +99,7 @@ class UnifiedCaseStateSyncService {
       );
 
       // Update case assignment in both apps
-      final caseRef = _orgRef.doc(orgId).collection('cases').doc(caseId);
+      final caseRef = _casesRef.doc(caseId);
       await caseRef.update({
         'assigneeId': newAssigneeId,
         'lastAssignmentUpdate': FieldValue.serverTimestamp(),
@@ -159,7 +159,7 @@ class UnifiedCaseStateSyncService {
       );
 
       // Update case status in both apps
-      final caseRef = _orgRef.doc(orgId).collection('cases').doc(caseId);
+      final caseRef = _casesRef.doc(caseId);
       await caseRef.update({
         'status': newStatus,
         'lastStatusUpdate': FieldValue.serverTimestamp(),
@@ -278,9 +278,7 @@ class UnifiedCaseStateSyncService {
     String caseId,
     String orgId,
   ) {
-    return _orgRef.doc(orgId).collection('cases').doc(caseId).snapshots().map((
-      snapshot,
-    ) {
+    return _casesRef.doc(caseId).snapshots().map((snapshot) {
       if (!snapshot.exists) return {};
 
       final data = snapshot.data() as Map<String, dynamic>;
