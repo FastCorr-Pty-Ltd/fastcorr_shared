@@ -33,9 +33,7 @@ class TrialModel {
   final int capitalAmount;
   final String opposingAttorney;
   final String opposingAttorneyId;
-  final String? counselBriefId; // Deprecated: kept for backward compatibility
-  final List<UploadFileData>?
-  counselBriefs; // New: supports multiple counsel briefs
+  final List<UploadFileData>? counselBriefs;
   final String? scale;
   final TrialType type;
   final Timestamp? updatedAt; // For optimistic locking and version tracking
@@ -55,7 +53,6 @@ class TrialModel {
     required this.capitalAmount,
     required this.opposingAttorney,
     required this.opposingAttorneyId,
-    this.counselBriefId,
     this.counselBriefs,
     this.scale,
     required this.type,
@@ -82,7 +79,6 @@ class TrialModel {
       capitalAmount: json['capitalAmount'],
       opposingAttorney: json['opposingAttorney'],
       opposingAttorneyId: json['opposingAttorneyId'],
-      counselBriefId: json['counselBriefId'],
       counselBriefs: json['counselBriefs'] != null
           ? (json['counselBriefs'] as List)
                 .map((e) => UploadFileData.fromJson(e as Map<String, dynamic>))
@@ -116,7 +112,6 @@ class TrialModel {
       capitalAmount: snapshot['capitalAmount'],
       opposingAttorney: snapshot['opposingAttorney'],
       opposingAttorneyId: snapshot['opposingAttorneyId'],
-      counselBriefId: snapshot['counselBriefId'],
       counselBriefs:
           snapshot['counselBriefs'] != null && snapshot['counselBriefs'] is List
           ? (snapshot['counselBriefs'] as List)
@@ -151,8 +146,6 @@ class TrialModel {
       'capitalAmount': capitalAmount,
       'opposingAttorney': opposingAttorney,
       'opposingAttorneyId': opposingAttorneyId,
-      'counselBriefId': counselBriefId,
-
       'counselBriefs': counselBriefs?.map((e) => e.toJson()).toList(),
       'scale': scale,
       'type': type.name,
@@ -179,7 +172,6 @@ class TrialModel {
     int? capitalAmount,
     String? opposingAttorney,
     String? opposingAttorneyId,
-    String? counselBriefId,
     List<UploadFileData>? counselBriefs,
     String? scale,
     TrialType? type,
@@ -204,7 +196,6 @@ class TrialModel {
       capitalAmount: capitalAmount ?? this.capitalAmount,
       opposingAttorney: opposingAttorney ?? this.opposingAttorney,
       opposingAttorneyId: opposingAttorneyId ?? this.opposingAttorneyId,
-      counselBriefId: counselBriefId ?? this.counselBriefId,
       counselBriefs: counselBriefs ?? this.counselBriefs,
       scale: scale ?? this.scale,
       type: type ?? this.type,

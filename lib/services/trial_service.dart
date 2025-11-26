@@ -200,10 +200,7 @@ class TrialService {
     try {
       final docRef = _trialsRef.doc();
       final now = Timestamp.now();
-      final trialToSave = trial.copyWith(
-        trialId: docRef.id,
-        updatedAt: now,
-      );
+      final trialToSave = trial.copyWith(trialId: docRef.id, updatedAt: now);
       await docRef.set(trialToSave.toJson());
       return trialToSave;
     } catch (e, stackTrace) {
@@ -217,8 +214,12 @@ class TrialService {
   /// Returns null if valid, error message if invalid
   String? validateTrialDate(DateTime trialDate) {
     final now = DateTime.now();
-    final minDate = now.subtract(const Duration(days: 365)); // Allow past dates up to 1 year
-    final maxDate = now.add(const Duration(days: 365 * 3)); // Allow future dates up to 3 years
+    final minDate = now.subtract(
+      const Duration(days: 365),
+    ); // Allow past dates up to 1 year
+    final maxDate = now.add(
+      const Duration(days: 365 * 3),
+    ); // Allow future dates up to 3 years
 
     if (trialDate.isBefore(minDate)) {
       return 'Trial date cannot be more than 1 year in the past';
@@ -293,26 +294,37 @@ class TrialService {
           // Updating existing trial - read it within transaction
           trialRef = _trialsRef.doc(existingTrial.trialId);
           final trialDoc = await transaction.get(trialRef);
-          
+
           if (!trialDoc.exists) {
-            log('[TrialService] Existing trial ${existingTrial.trialId} not found in transaction');
+            log(
+              '[TrialService] Existing trial ${existingTrial.trialId} not found in transaction',
+            );
             throw Exception('Trial not found');
           }
 
           trialToProcess = TrialModel.fromSnapshot(trialDoc);
-          
+
           // Enhanced optimistic locking: verify the trial hasn't been modified
           if (trialToProcess.status != existingTrial.status) {
-            log('[TrialService] Trial status changed from ${existingTrial.status} to ${trialToProcess.status}');
-            throw Exception('Trial status has changed. Please refresh and try again.');
+            log(
+              '[TrialService] Trial status changed from ${existingTrial.status} to ${trialToProcess.status}',
+            );
+            throw Exception(
+              'Trial status has changed. Please refresh and try again.',
+            );
           }
-          
+
           // Check updatedAt timestamp for additional version checking
-          if (existingTrial.updatedAt != null && trialToProcess.updatedAt != null) {
-            if (trialToProcess.updatedAt!.millisecondsSinceEpoch != 
+          if (existingTrial.updatedAt != null &&
+              trialToProcess.updatedAt != null) {
+            if (trialToProcess.updatedAt!.millisecondsSinceEpoch !=
                 existingTrial.updatedAt!.millisecondsSinceEpoch) {
-              log('[TrialService] Trial was modified (updatedAt mismatch). Expected: ${existingTrial.updatedAt}, Got: ${trialToProcess.updatedAt}');
-              throw Exception('Trial was modified by another process. Please refresh and try again.');
+              log(
+                '[TrialService] Trial was modified (updatedAt mismatch). Expected: ${existingTrial.updatedAt}, Got: ${trialToProcess.updatedAt}',
+              );
+              throw Exception(
+                'Trial was modified by another process. Please refresh and try again.',
+              );
             }
           }
         } else {
@@ -324,17 +336,21 @@ class TrialService {
             status: TrialStatus.pendingConfirmation,
             type: type,
           );
-          
+
           if (duplicateTrials.isNotEmpty) {
             // Verify within transaction that the duplicate still exists
             // This ensures we catch race conditions where another transaction
             // creates a duplicate between our check and the transaction
             final duplicateRef = _trialsRef.doc(duplicateTrials.first.trialId);
             final duplicateDoc = await transaction.get(duplicateRef);
-            
+
             if (duplicateDoc.exists) {
-              log('[TrialService] Duplicate pendingConfirmation trial found for $litNumber, type: $type');
-              throw Exception('A trial is already pending confirmation for this case. Please confirm the existing trial instead.');
+              log(
+                '[TrialService] Duplicate pendingConfirmation trial found for $litNumber, type: $type',
+              );
+              throw Exception(
+                'A trial is already pending confirmation for this case. Please confirm the existing trial instead.',
+              );
             }
           }
 
@@ -357,87 +373,81 @@ class TrialService {
 
         // Prepare update data with timestamp for version tracking
         final now = Timestamp.now();
-        final updateData = <String, dynamic>{
-          'updatedAt': now,
-        };
+        final updateData = <String, dynamic>{'updatedAt': now};
 
         // Update status if needed
         if (needsStatusUpdate) {
           if (trialToProcess.status != TrialStatus.pendingConfirmation) {
-            throw Exception('Cannot update status: trial is not in pendingConfirmation status');
+            throw Exception(
+              'Cannot update status: trial is not in pendingConfirmation status',
+            );
           }
           updateData['status'] = TrialStatus.pending.name;
-          log('[TrialService] Updating trial status from pendingConfirmation to pending');
+          log(
+            '[TrialService] Updating trial status from pendingConfirmation to pending',
+          );
         }
 
         // Add counsel briefs if provided (supports multiple)
         if (counselBriefs != null && counselBriefs.isNotEmpty) {
           // Convert UploadFileData list to JSON
-          updateData['counselBriefs'] = counselBriefs.map((brief) => brief.toJson()).toList();
-          // Keep backward compatibility with first brief
-          final firstBrief = counselBriefs.first;
-          updateData['counselBriefId'] = firstBrief.fileId;
-          updateData['counselBriefName'] = firstBrief.fileName;
-          updateData['counselBriefUrl'] = firstBrief.fileUrl ?? '';
-          if (firstBrief.size != null) {
-            updateData['counselBriefSize'] = firstBrief.size!.round();
-          }
-          log('[TrialService] Linking ${counselBriefs.length} counsel brief(s) to trial');
+          updateData['counselBriefs'] = counselBriefs
+              .map((brief) => brief.toJson())
+              .toList();
+          log(
+            '[TrialService] Linking ${counselBriefs.length} counsel brief(s) to trial',
+          );
         }
 
         // Perform the update/create atomically
         if (existingTrial != null && existingTrial.trialId.isNotEmpty) {
           // Update existing trial
-          if (updateData.length > 1) { // More than just updatedAt
+          if (updateData.length > 1) {
+            // More than just updatedAt
             transaction.update(trialRef, updateData);
           }
-          log('[TrialService] Updating existing trial ${trialRef.id} atomically');
-          
+          log(
+            '[TrialService] Updating existing trial ${trialRef.id} atomically',
+          );
+
           // Return updated trial model with new timestamp
           return trialToProcess.copyWith(
-            status: needsStatusUpdate ? TrialStatus.pending : trialToProcess.status,
+            status: needsStatusUpdate
+                ? TrialStatus.pending
+                : trialToProcess.status,
             counselBriefs: counselBriefs ?? trialToProcess.counselBriefs,
-            counselBriefId: counselBriefs?.isNotEmpty == true 
-                ? counselBriefs!.first.fileId 
-                : trialToProcess.counselBriefId,
             updatedAt: now,
           );
         } else {
           // Create new trial
           final trialToSave = trialToProcess.copyWith(trialId: trialRef.id);
-          final finalTrial = needsStatusUpdate 
+          final finalTrial = needsStatusUpdate
               ? trialToSave.copyWith(status: TrialStatus.pending)
               : trialToSave;
-          
+
           // Merge counsel briefs into the trial JSON
           final trialJson = finalTrial.toJson();
           if (counselBriefs != null && counselBriefs.isNotEmpty) {
-            trialJson['counselBriefs'] = counselBriefs.map((brief) => brief.toJson()).toList();
-            // Keep backward compatibility
-            final firstBrief = counselBriefs.first;
-            trialJson['counselBriefId'] = firstBrief.fileId;
-            trialJson['counselBriefName'] = firstBrief.fileName;
-            trialJson['counselBriefUrl'] = firstBrief.fileUrl ?? '';
-            if (firstBrief.size != null) {
-              trialJson['counselBriefSize'] = firstBrief.size!.round();
-            }
+            trialJson['counselBriefs'] = counselBriefs
+                .map((brief) => brief.toJson())
+                .toList();
           }
           trialJson['updatedAt'] = now;
-          
+
           transaction.set(trialRef, trialJson);
           log('[TrialService] Creating new trial ${trialRef.id} atomically');
-          
+
           return finalTrial.copyWith(
             counselBriefs: counselBriefs ?? finalTrial.counselBriefs,
-            counselBriefId: counselBriefs?.isNotEmpty == true 
-                ? counselBriefs!.first.fileId 
-                : finalTrial.counselBriefId,
             updatedAt: now,
           );
         }
       });
     } catch (e, stackTrace) {
-      log('[TrialService] Error in atomic trial operation: $e', stackTrace: stackTrace);
+      log(
+        '[TrialService] Error in atomic trial operation: $e',
+        stackTrace: stackTrace,
+      );
       return null;
     }
   }
@@ -477,13 +487,10 @@ class TrialService {
     String? scale,
     String? opposingAttorney,
     String? opposingAttorneyId,
-    String? counselBriefId,
   }) async {
     if (trialId.isEmpty) return false;
 
-    final updateData = <String, dynamic>{
-      'updatedAt': Timestamp.now(),
-    };
+    final updateData = <String, dynamic>{'updatedAt': Timestamp.now()};
 
     if (correspondentId != null) {
       updateData['correspondentId'] = correspondentId;
@@ -523,10 +530,6 @@ class TrialService {
 
     if (opposingAttorneyId != null) {
       updateData['opposingAttorneyId'] = opposingAttorneyId;
-    }
-
-    if (counselBriefId != null) {
-      updateData['counselBriefId'] = counselBriefId;
     }
 
     if (updateData.length == 1) {
@@ -603,7 +606,9 @@ class TrialService {
           // Only flag if trial date is significantly in the past
           if (trial.trialDate.toDate().isBefore(pastDate)) {
             orphanedTrialIds.add(doc.id);
-            log('[TrialService] Found stale pending trial with past date: ${doc.id}');
+            log(
+              '[TrialService] Found stale pending trial with past date: ${doc.id}',
+            );
           }
         }
       }
@@ -650,7 +655,9 @@ class TrialService {
 
           // Only auto-resolve if explicitly requested and trial is very old
           if (autoResolve && trial.status == TrialStatus.pendingConfirmation) {
-            final trialAge = DateTime.now().difference(trial.trialDate.toDate());
+            final trialAge = DateTime.now().difference(
+              trial.trialDate.toDate(),
+            );
             if (trialAge.inDays > 60) {
               // Mark as resolved by client if very old
               final trialRef = _trialsRef.doc(trialId);
@@ -726,15 +733,34 @@ class TrialService {
       final briefId = _uuid.v4();
       final uploadedAt = Timestamp.now();
 
-      final updateData = {
-        'counselBriefId': briefId,
-        'counselBriefName': file.name,
-        'counselBriefUrl': downloadUrl,
-        'counselBriefUploadedAt': uploadedAt,
-        'counselBriefNotes': notes ?? '',
+      // Get trial to extract litNumber
+      final trial = TrialModel.fromSnapshot(trialDoc);
+
+      // Get existing counsel briefs or create new list
+      final trialDocData = trialDoc.data();
+      final existingBriefs = trialDocData?['counselBriefs'] as List? ?? [];
+
+      // Create new brief entry as JSON map (UploadFileData requires caseFileId which may not be available)
+      final newBriefJson = {
+        'fileId': briefId,
+        'fileName': file.name,
+        'fileUrl': downloadUrl,
+        'litNumber': trial.litNumber,
+        'caseFileId': '', // caseFileId may not be available at trial level
+        'size': file.size?.toDouble(),
+        'takenAt': uploadedAt.toDate().toIso8601String(),
       };
 
-      await trialRef.update(updateData);
+      // Add new brief to list
+      final updatedBriefs = <Map<String, dynamic>>[
+        ...existingBriefs.map((e) => e as Map<String, dynamic>),
+        newBriefJson,
+      ];
+
+      await trialRef.update({
+        'counselBriefs': updatedBriefs,
+        'updatedAt': Timestamp.now(),
+      });
 
       return CounselBriefInfo(
         briefId: briefId,
@@ -757,11 +783,8 @@ class TrialService {
     if (trialId.isEmpty) return false;
     try {
       await _trialsRef.doc(trialId).update({
-        'counselBriefId': FieldValue.delete(),
-        'counselBriefName': FieldValue.delete(),
-        'counselBriefUrl': FieldValue.delete(),
-        'counselBriefUploadedAt': FieldValue.delete(),
-        'counselBriefNotes': FieldValue.delete(),
+        'counselBriefs': FieldValue.delete(),
+        'updatedAt': Timestamp.now(),
       });
       return true;
     } catch (e, stackTrace) {
