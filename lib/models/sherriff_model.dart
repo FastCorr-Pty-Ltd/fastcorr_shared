@@ -2,42 +2,33 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/utils/utils.dart';
 
 class SheriffModel {
-  final String? sheriffId;
-  final String? sheriffName;
-  final String? magisterialDistrict;
-  final String? address;
-  final String? postalAddress;
-  final String? officeLine;
-  final String? cellNumber;
-  final String? emailAddress;
-  final String? province;
-  final String? postalCode;
+  String? sheriffId;
+  String? name;
+  String? contact;
+  String? phone;
+  String? address;
+  String? email;
+  List<String>? serviceAreas;
 
   SheriffModel({
     this.sheriffId,
-    this.sheriffName,
-    this.magisterialDistrict,
+    this.name,
+    this.contact,
+    this.phone,
     this.address,
-    this.postalAddress,
-    this.officeLine,
-    this.cellNumber,
-    this.emailAddress,
-    this.province,
-    this.postalCode,
+    this.email,
+    this.serviceAreas,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'sheriffId': sheriffId,
-      'sheriffName': sheriffName,
-      'magisterialDistrict': magisterialDistrict,
+      'name': name,
+      'contact': contact,
+      'phone': phone,
       'address': address,
-      'postalAddress': postalAddress,
-      'officeLine': officeLine,
-      'cellNumber': cellNumber,
-      'emailAddress': emailAddress,
-      'province': province,
-      'postalCode': postalCode,
+      'email': email,
+      'serviceAreas': serviceAreas,
     };
   }
 
@@ -45,56 +36,44 @@ class SheriffModel {
   factory SheriffModel.fromJson(Map<String, dynamic> json) {
     return SheriffModel(
       sheriffId: json['sheriffId'],
-      sheriffName: cleanString(json['sheriffName']),
-      magisterialDistrict: cleanString(json['magisterialDistrict']),
+      name: cleanString(json['name']),
+      contact: cleanString(json['contact']),
+      phone: cleanString(json['phone']),
       address: cleanString(json['address']),
-      postalAddress: cleanString(json['postalAddress']),
-      officeLine: cleanString(json['officeLine']),
-      cellNumber: cleanString(json['cellNumber']),
-      emailAddress: cleanString(json['emailAddress']),
-      province: cleanString(json['province']),
-      postalCode: cleanString(json['postalCode']),
+      email: cleanString(json['email']),
+      serviceAreas: safeListFromJson(json['serviceAreas']),
     );
   }
 
   factory SheriffModel.fromSnapshot(DocumentSnapshot snap) {
     return SheriffModel(
       sheriffId: snap.id,
-      sheriffName: cleanString(snap['sheriffName']),
-      magisterialDistrict: cleanString(snap['magisterialDistrict']),
+      name: cleanString(snap['name']),
+      contact: cleanString(snap['contact']),
+      phone: cleanString(snap['phone']),
       address: cleanString(snap['address']),
-      postalAddress: cleanString(snap['postalAddress']),
-      officeLine: cleanString(snap['officeLine']),
-      cellNumber: cleanString(snap['cellNumber']),
-      emailAddress: cleanString(snap['emailAddress']),
-      province: cleanString(snap['province']),
-      postalCode: cleanString(snap['postalCode']),
+      email: cleanString(snap['email']),
+      serviceAreas: safeListFromSnapshot(snap['serviceAreas']),
     );
   }
 
   SheriffModel copyWith({
     String? sheriffId,
-    String? sheriffName,
-    String? magisterialDistrict,
+    String? name,
+    String? contact,
+    String? phone,
     String? address,
-    String? postalAddress,
-    String? officeLine,
-    String? cellNumber,
-    String? emailAddress,
-    String? province,
-    String? postalCode,
+    String? email,
+    List<String>? serviceAreas,
   }) {
     return SheriffModel(
       sheriffId: sheriffId ?? this.sheriffId,
-      sheriffName: sheriffName ?? this.sheriffName,
-      magisterialDistrict: magisterialDistrict ?? this.magisterialDistrict,
+      name: name ?? this.name,
+      contact: contact ?? this.contact,
+      phone: phone ?? this.phone,
       address: address ?? this.address,
-      postalAddress: postalAddress ?? this.postalAddress,
-      officeLine: officeLine ?? this.officeLine,
-      cellNumber: cellNumber ?? this.cellNumber,
-      emailAddress: emailAddress ?? this.emailAddress,
-      province: province ?? this.province,
-      postalCode: postalCode ?? this.postalCode,
+      email: email ?? this.email,
+      serviceAreas: serviceAreas ?? this.serviceAreas,
     );
   }
 }
