@@ -97,6 +97,7 @@ class RequestModel {
   final int? driverFare;
   final bool? selfService;
   final String? receiptId;
+  final int? totalTimeSpent; // Total time spent in seconds
 
   /// Status tracking timestamps
   final DateTime? readyForPickupAt;
@@ -162,6 +163,7 @@ class RequestModel {
     this.lastAssignedAt,
     this.timerExtensions,
     this.receiptId,
+    this.totalTimeSpent,
   });
 
   factory RequestModel.fromJson(Map<String, dynamic> json) {
@@ -221,6 +223,7 @@ class RequestModel {
       timerExtensions: _parseTimerExtensions(json['timerExtensions']),
 
       receiptId: json['receiptId']?.toString() ?? '',
+      totalTimeSpent: json['totalTimeSpent']?.toInt(),
     );
   }
 
@@ -281,6 +284,7 @@ class RequestModel {
         snap['timerExtensions'],
       ),
       receiptId: snap['receiptId'] ?? '',
+      totalTimeSpent: snap['totalTimeSpent']?.toInt(),
     );
   }
 
@@ -354,6 +358,7 @@ class RequestModel {
           ? Timestamp.fromDate(lastAssignedAt!)
           : null,
       'timerExtensions': timerExtensions?.map((e) => e.toJson()).toList(),
+      'totalTimeSpent': totalTimeSpent,
     };
   }
 
@@ -402,6 +407,7 @@ class RequestModel {
     List<TimerExtension>? timerExtensions,
     String? receiptId,
     int? phase,
+    int? totalTimeSpent,
   }) {
     return RequestModel(
       orderId: orderId ?? this.orderId,
@@ -448,6 +454,7 @@ class RequestModel {
       timerExtensions: timerExtensions ?? this.timerExtensions,
       receiptId: receiptId ?? this.receiptId,
       phase: phase ?? this.phase,
+      totalTimeSpent: totalTimeSpent ?? this.totalTimeSpent,
     );
   }
 
