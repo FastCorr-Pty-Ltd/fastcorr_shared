@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/utils/utils.dart';
 
-enum AlertType {
+enum ClientAlertType {
   // Litigation Request
   requestSubmitted,
   requestAccepted,
@@ -53,7 +53,7 @@ enum AlertType {
   maintenanceScheduled,
 }
 
-extension AlertTypeX on AlertType {
+extension AlertTypeX on ClientAlertType {
   /// Categorizes as 'Litigation' if the enum starts with 'request'
   bool get isLitigation => name.startsWith('request');
 
@@ -70,31 +70,31 @@ extension AlertTypeX on AlertType {
   bool get shouldSendEmail {
     switch (this) {
       // Case Management (Specific ones)
-      case AlertType.caseCreated:
-      case AlertType.caseDocumentUploaded:
+      case ClientAlertType.caseCreated:
+      case ClientAlertType.caseDocumentUploaded:
         return true;
 
       // Trial (All)
-      case AlertType.trialCreated:
-      case AlertType.trialReminder24h:
-      case AlertType.trialReminder1h:
-      case AlertType.trialUpdated:
-      case AlertType.trialCancelled:
+      case ClientAlertType.trialCreated:
+      case ClientAlertType.trialReminder24h:
+      case ClientAlertType.trialReminder1h:
+      case ClientAlertType.trialUpdated:
+      case ClientAlertType.trialCancelled:
         return true;
 
       // Payment (All)
-      case AlertType.paymentSuccessful:
-      case AlertType.paymentFailed:
-      case AlertType.paymentRefund:
-      case AlertType.creditAdded:
-      case AlertType.creditLow:
+      case ClientAlertType.paymentSuccessful:
+      case ClientAlertType.paymentFailed:
+      case ClientAlertType.paymentRefund:
+      case ClientAlertType.creditAdded:
+      case ClientAlertType.creditLow:
         return true;
 
       // System (All)
-      case AlertType.accountVerification:
-      case AlertType.inviteAccepted:
-      case AlertType.policyUpdate:
-      case AlertType.maintenanceScheduled:
+      case ClientAlertType.accountVerification:
+      case ClientAlertType.inviteAccepted:
+      case ClientAlertType.policyUpdate:
+      case ClientAlertType.maintenanceScheduled:
         return true;
 
       // Everything else (Litigation, Delivery, Chat) defaults to false
@@ -104,19 +104,19 @@ extension AlertTypeX on AlertType {
   }
 
   bool get isCritical =>
-      this == AlertType.requestExpired ||
-      this == AlertType.requestFailed ||
-      this == AlertType.deliveryFailed ||
-      this == AlertType.paymentFailed ||
-      this == AlertType.trialReminder1h ||
-      this == AlertType.creditLow;
+      this == ClientAlertType.requestExpired ||
+      this == ClientAlertType.requestFailed ||
+      this == ClientAlertType.deliveryFailed ||
+      this == ClientAlertType.paymentFailed ||
+      this == ClientAlertType.trialReminder1h ||
+      this == ClientAlertType.creditLow;
 }
 
-class NotificationModel {
+class ClientAlertModel {
   final String id;
   final String taskId;
   final String userId;
-  final AlertType type;
+  final ClientAlertType type;
   final String title;
   final String body;
   final String officeId;
@@ -127,7 +127,7 @@ class NotificationModel {
   final bool sendEmail;
   final Map<String, dynamic>? data;
 
-  NotificationModel({
+  ClientAlertModel({
     required this.id,
     required this.taskId,
     required this.userId,
@@ -159,12 +159,12 @@ class NotificationModel {
     'data': data,
   };
 
-  static NotificationModel fromJson(Map<String, Object?> json) {
-    return NotificationModel(
+  static ClientAlertModel fromJson(Map<String, Object?> json) {
+    return ClientAlertModel(
       id: json['id'] as String,
       taskId: json['taskId'] as String? ?? '',
       userId: json['userId'] as String,
-      type: AlertType.values.byName(json['type'] as String),
+      type: ClientAlertType.values.byName(json['type'] as String),
       title: json['title'] as String,
       body: json['body'] as String,
       officeId: json['officeId'] as String? ?? '',
@@ -177,12 +177,12 @@ class NotificationModel {
     );
   }
 
-  factory NotificationModel.fromSnapshot(DocumentSnapshot snap) {
-    return NotificationModel(
+  factory ClientAlertModel.fromSnapshot(DocumentSnapshot snap) {
+    return ClientAlertModel(
       id: snap.id,
       taskId: snap['taskId'] as String? ?? '',
       userId: snap['userId'] as String,
-      type: AlertType.values.byName(snap['type'] as String),
+      type: ClientAlertType.values.byName(snap['type'] as String),
       title: snap['title'] as String,
       body: snap['body'] as String,
       officeId: snap['officeId'] as String? ?? '',
@@ -198,11 +198,11 @@ class NotificationModel {
     );
   }
 
-  NotificationModel copyWith({
+  ClientAlertModel copyWith({
     String? id,
     String? taskId,
     String? userId,
-    AlertType? type,
+    ClientAlertType? type,
     String? title,
     String? body,
     String? officeId,
@@ -213,7 +213,7 @@ class NotificationModel {
     bool? sendEmail,
     Map<String, dynamic>? data,
   }) {
-    return NotificationModel(
+    return ClientAlertModel(
       id: id ?? this.id,
       taskId: taskId ?? this.taskId,
       userId: userId ?? this.userId,
