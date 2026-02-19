@@ -53,7 +53,7 @@ enum AlertType {
   maintenanceScheduled,
 }
 
-extension NotificationTypeX on AlertType {
+extension AlertTypeX on AlertType {
   /// Categorizes as 'Litigation' if the enum starts with 'request'
   bool get isLitigation => name.startsWith('request');
 
