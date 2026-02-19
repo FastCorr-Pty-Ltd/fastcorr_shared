@@ -14,4 +14,4 @@ export 'ticket_msg.dart';
 export 'support_ticket.dart';
 export 'qr_model.dart';
 export 'sherriff_model.dart';
-export 'notification_model.dart';
+export 'client_alert_model.dart';
