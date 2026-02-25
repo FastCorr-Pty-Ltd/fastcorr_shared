@@ -231,68 +231,8 @@ class ClientAlertModel {
   }
 
   // =============================================================================
-  // NOTIFICATION TYPE HELPERS
+  // NOTIFICATION PRESENTATION HELPERS
   // =============================================================================
-
-  /// Litigation Request notifications
-  bool get isRequestSubmitted => type == 'request_submitted';
-  bool get isRequestAccepted => type == 'request_accepted';
-  bool get isRequestArrived => type == 'request_arrived';
-  bool get isRequestPickedUp => type == 'request_picked_up';
-  bool get isRequestCompleted => type == 'request_completed';
-  bool get isRequestFailed => type == 'request_failed';
-  bool get isRequestExpired => type == 'request_expired';
-
-  /// Delivery Order notifications
-  bool get isDeliveryAccepted => type == 'delivery_accepted';
-  bool get isDeliveryArrivedAtPickup => type == 'delivery_arrived_at_pickup';
-  bool get isDeliveryPickedUp => type == 'delivery_picked_up';
-  bool get isDeliveryInTransit => type == 'delivery_in_transit';
-  bool get isDeliveryArrivedAtDestination =>
-      type == 'delivery_arrived_at_destination';
-  bool get isDeliveryCompleted => type == 'delivery_completed';
-  bool get isDeliveryFailed => type == 'delivery_failed';
-
-  /// Case Management notifications
-  bool get isCaseCreated => type == 'case_created';
-  bool get isCaseUpdated => type == 'case_updated';
-  bool get isCasePhaseChanged => type == 'case_phase_changed';
-  bool get isCaseDocumentUploaded => type == 'case_document_uploaded';
-  bool get isCaseCommentAdded => type == 'case_comment_added';
-
-  /// Trial notifications
-  bool get isTrialCreated => type == 'trial_created';
-  bool get isTrialReminder24h => type == 'trial_reminder_24h';
-  bool get isTrialReminder1h => type == 'trial_reminder_1h';
-  bool get isTrialUpdated => type == 'trial_updated';
-  bool get isTrialCancelled => type == 'trial_cancelled';
-
-  /// Chat notifications
-  bool get isChatMessage => type == 'chat_message';
-  bool get isChatDocumentShared => type == 'chat_document_shared';
-  bool get isChatMention => type == 'chat_mention';
-
-  /// Payment notifications
-  bool get isPaymentSuccessful => type == 'payment_successful';
-  bool get isPaymentFailed => type == 'payment_failed';
-  bool get isPaymentRefund => type == 'payment_refund';
-  bool get isCreditAdded => type == 'credit_added';
-  bool get isCreditLow => type == 'credit_low';
-
-  /// System notifications
-  bool get isAccountVerification => type == 'account_verification';
-  bool get isInviteAccepted => type == 'invite_accepted';
-  bool get isPolicyUpdate => type == 'policy_update';
-  bool get isMaintenanceScheduled => type == 'maintenance_scheduled';
-
-  /// Critical notifications (require immediate attention)
-  bool get isCritical =>
-      isRequestExpired ||
-      isRequestFailed ||
-      isDeliveryFailed ||
-      isPaymentFailed ||
-      isTrialReminder1h ||
-      isCreditLow;
 
   /// Get formatted time since sent
   String get timeAgo {
@@ -312,104 +252,126 @@ class ClientAlertModel {
 
   /// Get notification icon based on type
   String get icon {
-    // Request notifications
-    if (isRequestSubmitted) return '📝';
-    if (isRequestAccepted) return '✅';
-    if (isRequestArrived) return '📍';
-    if (isRequestPickedUp) return '📦';
-    if (isRequestCompleted) return '🎉';
-    if (isRequestFailed) return '❌';
-    if (isRequestExpired) return '⏰';
-
-    // Delivery notifications
-    if (isDeliveryAccepted) return '✅';
-    if (isDeliveryArrivedAtPickup) return '📍';
-    if (isDeliveryPickedUp) return '📦';
-    if (isDeliveryInTransit) return '🚗';
-    if (isDeliveryArrivedAtDestination) return '📍';
-    if (isDeliveryCompleted) return '🎉';
-    if (isDeliveryFailed) return '❌';
-
-    // Case notifications
-    if (isCaseCreated) return '📁';
-    if (isCaseUpdated) return '🔄';
-    if (isCasePhaseChanged) return '⚖️';
-    if (isCaseDocumentUploaded) return '📄';
-    if (isCaseCommentAdded) return '💬';
-
-    // Trial notifications
-    if (isTrialCreated) return '📅';
-    if (isTrialReminder24h || isTrialReminder1h) return '⏰';
-    if (isTrialUpdated) return '🔄';
-    if (isTrialCancelled) return '🚫';
-
-    // Chat notifications
-    if (isChatMessage) return '💬';
-    if (isChatDocumentShared) return '📎';
-    if (isChatMention) return '👤';
-
-    // Payment notifications
-    if (isPaymentSuccessful) return '💳';
-    if (isPaymentFailed) return '❌';
-    if (isPaymentRefund) return '💰';
-    if (isCreditAdded) return '💰';
-    if (isCreditLow) return '⚠️';
-
-    // System notifications
-    if (isAccountVerification) return '✔️';
-    if (isInviteAccepted) return '👥';
-    if (isPolicyUpdate) return '📋';
-    if (isMaintenanceScheduled) return '🔧';
-
-    return '📢';
+    switch (type) {
+      case ClientAlertType.requestSubmitted:
+        return '📝';
+      case ClientAlertType.requestAccepted:
+      case ClientAlertType.deliveryAccepted:
+        return '✅';
+      case ClientAlertType.requestArrived:
+      case ClientAlertType.deliveryArrivedAtPickup:
+      case ClientAlertType.deliveryArrivedAtDestination:
+        return '📍';
+      case ClientAlertType.requestPickedUp:
+      case ClientAlertType.deliveryPickedUp:
+        return '📦';
+      case ClientAlertType.requestCompleted:
+      case ClientAlertType.deliveryCompleted:
+        return '🎉';
+      case ClientAlertType.requestFailed:
+      case ClientAlertType.deliveryFailed:
+      case ClientAlertType.paymentFailed:
+        return '❌';
+      case ClientAlertType.requestExpired:
+      case ClientAlertType.trialReminder24h:
+      case ClientAlertType.trialReminder1h:
+        return '⏰';
+      case ClientAlertType.deliveryInTransit:
+        return '🚗';
+      case ClientAlertType.caseCreated:
+        return '📁';
+      case ClientAlertType.caseUpdated:
+      case ClientAlertType.trialUpdated:
+        return '🔄';
+      case ClientAlertType.casePhaseChanged:
+        return '⚖️';
+      case ClientAlertType.caseDocumentUploaded:
+        return '📄';
+      case ClientAlertType.caseCommentAdded:
+      case ClientAlertType.chatMessage:
+        return '💬';
+      case ClientAlertType.trialCreated:
+        return '📅';
+      case ClientAlertType.trialCancelled:
+        return '🚫';
+      case ClientAlertType.chatDocumentShared:
+        return '📎';
+      case ClientAlertType.chatMention:
+        return '👤';
+      case ClientAlertType.paymentSuccessful:
+        return '💳';
+      case ClientAlertType.paymentRefund:
+      case ClientAlertType.creditAdded:
+        return '💰';
+      case ClientAlertType.creditLow:
+        return '⚠️';
+      case ClientAlertType.accountVerification:
+        return '✔️';
+      case ClientAlertType.inviteAccepted:
+        return '👥';
+      case ClientAlertType.policyUpdate:
+        return '📋';
+      case ClientAlertType.maintenanceScheduled:
+        return '🔧';
+    }
   }
 
   /// Get notification color based on type
   String get color {
-    // Request notifications
-    if (isRequestSubmitted) return '#2ED573'; // Green
-    if (isRequestAccepted) return '#2ED573'; // Green
-    if (isRequestArrived) return '#FFA502'; // Orange
-    if (isRequestPickedUp) return '#FFA502'; // Orange
-    if (isRequestCompleted) return '#3742FA'; // Blue
-    if (isRequestFailed) return '#FF6B6B'; // Red
-    if (isRequestExpired) return '#FF6B6B'; // Red
+    switch (type) {
+      // Green
+      case ClientAlertType.requestSubmitted:
+      case ClientAlertType.requestAccepted:
+      case ClientAlertType.deliveryAccepted:
+      case ClientAlertType.caseCreated:
+      case ClientAlertType.trialCreated:
+      case ClientAlertType.paymentSuccessful:
+      case ClientAlertType.creditAdded:
+        return '#2ED573';
 
-    // Delivery notifications
-    if (isDeliveryAccepted) return '#2ED573'; // Green
-    if (isDeliveryArrivedAtPickup) return '#FFA502'; // Orange
-    if (isDeliveryPickedUp) return '#FFA502'; // Orange
-    if (isDeliveryInTransit) return '#FFA502'; // Orange
-    if (isDeliveryArrivedAtDestination) return '#FFA502'; // Orange
-    if (isDeliveryCompleted) return '#3742FA'; // Blue
-    if (isDeliveryFailed) return '#FF6B6B'; // Red
+      // Orange
+      case ClientAlertType.requestArrived:
+      case ClientAlertType.requestPickedUp:
+      case ClientAlertType.deliveryArrivedAtPickup:
+      case ClientAlertType.deliveryPickedUp:
+      case ClientAlertType.deliveryInTransit:
+      case ClientAlertType.deliveryArrivedAtDestination:
+      case ClientAlertType.casePhaseChanged:
+      case ClientAlertType.trialReminder24h:
+      case ClientAlertType.creditLow:
+        return '#FFA502';
 
-    // Case notifications
-    if (isCaseCreated) return '#2ED573'; // Green
-    if (isCaseUpdated) return '#3742FA'; // Blue
-    if (isCasePhaseChanged) return '#FFA502'; // Orange
-    if (isCaseDocumentUploaded) return '#3742FA'; // Blue
-    if (isCaseCommentAdded) return '#9C88FF'; // Purple
+      // Blue
+      case ClientAlertType.requestCompleted:
+      case ClientAlertType.deliveryCompleted:
+      case ClientAlertType.caseUpdated:
+      case ClientAlertType.caseDocumentUploaded:
+      case ClientAlertType.trialUpdated:
+      case ClientAlertType.paymentRefund:
+        return '#3742FA';
 
-    // Trial notifications
-    if (isTrialCreated) return '#2ED573'; // Green
-    if (isTrialReminder24h) return '#FFA502'; // Orange
-    if (isTrialReminder1h) return '#FF6B6B'; // Red
-    if (isTrialUpdated) return '#3742FA'; // Blue
-    if (isTrialCancelled) return '#FF6B6B'; // Red
+      // Red
+      case ClientAlertType.requestFailed:
+      case ClientAlertType.requestExpired:
+      case ClientAlertType.deliveryFailed:
+      case ClientAlertType.trialReminder1h:
+      case ClientAlertType.trialCancelled:
+      case ClientAlertType.paymentFailed:
+        return '#FF6B6B';
 
-    // Chat notifications
-    if (isChatMessage || isChatDocumentShared || isChatMention) {
-      return '#9C88FF'; // Purple
+      // Purple
+      case ClientAlertType.caseCommentAdded:
+      case ClientAlertType.chatMessage:
+      case ClientAlertType.chatDocumentShared:
+      case ClientAlertType.chatMention:
+        return '#9C88FF';
+
+      // System
+      case ClientAlertType.accountVerification:
+      case ClientAlertType.inviteAccepted:
+      case ClientAlertType.policyUpdate:
+      case ClientAlertType.maintenanceScheduled:
+        return '#3742FA';
     }
-
-    // Payment notifications
-    if (isPaymentSuccessful || isCreditAdded) return '#2ED573'; // Green
-    if (isPaymentFailed) return '#FF6B6B'; // Red
-    if (isPaymentRefund) return '#3742FA'; // Blue
-    if (isCreditLow) return '#FFA502'; // Orange
-
-    // System notifications
-    return '#3742FA'; // Blue
   }
 }
