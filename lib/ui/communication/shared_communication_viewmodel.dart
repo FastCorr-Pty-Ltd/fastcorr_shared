@@ -1,5 +1,5 @@
-/// Shared Communication ViewModel
-/// Gmail-like interface for case communications across FastCorr apps
+// Shared Communication ViewModel
+// Gmail-like interface for case communications across FastCorr apps.
 
 import 'dart:async';
 import 'dart:developer';
@@ -36,6 +36,7 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
   UnifiedCaseMessage? _selectedMessage;
   String _searchQuery = '';
   UnifiedMessageType? _filterMessageType;
+  String? _lastErrorMessage;
 
   // Compose state
   bool _isComposing = false;
@@ -58,6 +59,7 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
   UnifiedCaseMessage? get selectedMessage => _selectedMessage;
   String get searchQuery => _searchQuery;
   UnifiedMessageType? get filterMessageType => _filterMessageType;
+  String? get lastErrorMessage => _lastErrorMessage;
 
   bool get isComposing => _isComposing;
   String get composeContent => _composeContent;
@@ -66,6 +68,8 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
 
   /// Check if current user has access to this case
   bool get hasAccess => _currentUserParticipant != null;
+  @override
+  bool get hasError => _lastErrorMessage != null && _lastErrorMessage!.isNotEmpty;
 
   /// Get filtered messages based on search and filter
   List<UnifiedCaseMessage> get filteredMessages {
@@ -256,6 +260,11 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
     notifyListeners();
   }
 
+  void clearError() {
+    _lastErrorMessage = null;
+    notifyListeners();
+  }
+
   /// Start composing a new message
   void startComposing({String? replyToMessageId}) {
     _isComposing = true;
@@ -334,7 +343,8 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
       }
     } catch (e) {
       log('Error picking files: $e');
-      // TODO: Show error message to user
+      _lastErrorMessage = 'Could not pick files. Please try again.';
+      notifyListeners();
     }
   }
 
@@ -398,6 +408,8 @@ class SharedCommunicationViewModel extends ReactiveViewModel {
     } catch (e, stackTrace) {
       log('Error sending message: $e');
       log('Stack trace: $stackTrace');
+      _lastErrorMessage = 'Failed to send message. Please try again.';
+      notifyListeners();
     } finally {
       setBusy(false);
     }

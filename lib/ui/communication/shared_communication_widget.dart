@@ -82,18 +82,30 @@ class SharedCommunicationWidget
     TextTheme textStyles,
   ) {
     return Scaffold(
-      body: viewModel.selectedMessage == null
-          ? MessageListPanel(
+      body: Column(
+        children: [
+          if (viewModel.hasError)
+            _buildErrorBanner(
               viewModel: viewModel,
-              colorScheme: colors,
-              textTheme: textStyles,
-            )
-          : MessageDetailPanel(
-              viewModel: viewModel,
-              colorScheme: colors,
-              textTheme: textStyles,
-              onBack: () => viewModel.clearSelectedMessage(),
+              colors: colors,
+              textStyles: textStyles,
             ),
+          Expanded(
+            child: viewModel.selectedMessage == null
+                ? MessageListPanel(
+                    viewModel: viewModel,
+                    colorScheme: colors,
+                    textTheme: textStyles,
+                  )
+                : MessageDetailPanel(
+                    viewModel: viewModel,
+                    colorScheme: colors,
+                    textTheme: textStyles,
+                    onBack: () => viewModel.clearSelectedMessage(),
+                  ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => viewModel.startComposing(),
         backgroundColor: colors.primary,
@@ -108,33 +120,79 @@ class SharedCommunicationWidget
     ColorScheme colors,
     TextTheme textStyles,
   ) {
-    return Row(
+    return Column(
       children: [
-        // Left Panel - Message List
-        Expanded(
-          flex: 1,
-          child: MessageListPanel(
+        if (viewModel.hasError)
+          _buildErrorBanner(
             viewModel: viewModel,
-            colorScheme: colors,
-            textTheme: textStyles,
+            colors: colors,
+            textStyles: textStyles,
           ),
-        ),
-
-        // Divider
-        Container(width: 1, color: colors.outline.withOpacity(0.2)),
-
-        // Right Panel - Message Detail
         Expanded(
-          flex: 2,
-          child: viewModel.selectedMessage == null
-              ? _buildEmptyDetailView(colors, textStyles)
-              : MessageDetailPanel(
+          child: Row(
+            children: [
+              // Left Panel - Message List
+              Expanded(
+                flex: 1,
+                child: MessageListPanel(
                   viewModel: viewModel,
                   colorScheme: colors,
                   textTheme: textStyles,
                 ),
+              ),
+
+              // Divider
+              Container(width: 1, color: colors.outline.withOpacity(0.2)),
+
+              // Right Panel - Message Detail
+              Expanded(
+                flex: 2,
+                child: viewModel.selectedMessage == null
+                    ? _buildEmptyDetailView(colors, textStyles)
+                    : MessageDetailPanel(
+                        viewModel: viewModel,
+                        colorScheme: colors,
+                        textTheme: textStyles,
+                      ),
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildErrorBanner({
+    required SharedCommunicationViewModel viewModel,
+    required ColorScheme colors,
+    required TextTheme textStyles,
+  }) {
+    return Material(
+      color: colors.errorContainer,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  viewModel.lastErrorMessage!,
+                  style: textStyles.bodyMedium?.copyWith(
+                    color: colors.onErrorContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'Dismiss',
+                onPressed: viewModel.clearError,
+                icon: Icon(Icons.close, color: colors.onErrorContainer),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -124,14 +124,15 @@ abstract class MapTrackingService with ListenableServiceMixin {
     required LatLng origin,
     required LatLng dest,
   }) async {
-    // TODO: Fix polyline points API integration
-    // For now, return a simple straight line route
-    log('Creating straight line route from $origin to $dest');
+    // Use an interpolated geodesic fallback route until external routing is wired.
+    // This avoids jagged two-point rendering and gives stable UX.
+    final points = _buildInterpolatedPoints(origin, dest);
+    log('Creating interpolated route with ${points.length} points from $origin to $dest');
 
     return [
       Polyline(
-        polylineId: const PolylineId('straight_route'),
-        points: [origin, dest],
+        polylineId: const PolylineId('interpolated_route'),
+        points: points,
         color: Colors.blue,
         width: 3,
         geodesic: true,
@@ -140,6 +141,18 @@ abstract class MapTrackingService with ListenableServiceMixin {
         jointType: JointType.round,
       ),
     ];
+  }
+
+  List<LatLng> _buildInterpolatedPoints(LatLng origin, LatLng dest) {
+    const segments = 24;
+    final points = <LatLng>[];
+    for (var i = 0; i <= segments; i++) {
+      final t = i / segments;
+      final lat = origin.latitude + ((dest.latitude - origin.latitude) * t);
+      final lng = origin.longitude + ((dest.longitude - origin.longitude) * t);
+      points.add(LatLng(lat, lng));
+    }
+    return points;
   }
 }
 
