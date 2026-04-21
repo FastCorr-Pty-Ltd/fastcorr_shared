@@ -64,70 +64,20 @@ class TrialModel {
   });
 
   factory TrialModel.fromJson(Map<String, dynamic> json) {
-    return TrialModel(
-      trialId: json['trialId'],
-      litNumber: json['litNumber'],
-      courtId: json['courtId'],
-      officeId: json['officeId'],
-      orgId: json['orgId'],
-      assigneeId: json['assigneeId'],
-      correspondentId: json['correspondentId'],
-      lawyerId: json['lawyerId'],
-      status: TrialStatus.values.byName(json['status']),
-      trialDate: processedTimestamp(json['trialDate'])!,
-      trialOutcome: json['trialOutcome'],
-      capitalAmount: json['capitalAmount'],
-      opposingAttorney: json['opposingAttorney'],
-      opposingAttorneyId: json['opposingAttorneyId'],
-      counselBriefs: json['counselBriefs'] != null
-          ? (json['counselBriefs'] as List)
-                .map((e) => UploadFileData.fromJson(e as Map<String, dynamic>))
-                .toList()
-          : null,
-      scale: json['scale'],
-      type: TrialType.values.byName(json['type']),
-      courtName: json['courtName'],
-      correspondentName: json['correspondentName'],
-      managerId: json['managerId'],
-      managerName: json['managerName'],
-      updatedAt: json['updatedAt'] != null
-          ? processedTimestamp(json['updatedAt'])
-          : null,
+    final m = Map<String, dynamic>.from(json);
+    final id = _trialReadString(m, 'trialId');
+    return _trialModelFromMap(
+      m,
+      trialId: id.isNotEmpty ? id : 'unknown',
     );
   }
 
   factory TrialModel.fromSnapshot(DocumentSnapshot snapshot) {
-    return TrialModel(
-      trialId: snapshot.id,
-      litNumber: snapshot['litNumber'],
-      courtId: snapshot['courtId'],
-      officeId: snapshot['officeId'],
-      orgId: snapshot['orgId'],
-      assigneeId: snapshot['assigneeId'],
-      correspondentId: snapshot['correspondentId'],
-      lawyerId: snapshot['lawyerId'],
-      status: TrialStatus.values.byName(snapshot['status']),
-      trialDate: processedTimestamp(snapshot['trialDate'])!,
-      trialOutcome: snapshot['trialOutcome'],
-      capitalAmount: snapshot['capitalAmount'],
-      opposingAttorney: snapshot['opposingAttorney'],
-      opposingAttorneyId: snapshot['opposingAttorneyId'],
-      counselBriefs:
-          snapshot['counselBriefs'] != null && snapshot['counselBriefs'] is List
-          ? (snapshot['counselBriefs'] as List)
-                .map((e) => UploadFileData.fromJson(e as Map<String, dynamic>))
-                .toList()
-          : null,
-      scale: snapshot['scale'],
-      type: TrialType.values.byName(snapshot['type']),
-      courtName: snapshot['courtName'],
-      correspondentName: snapshot['correspondentName'],
-      managerId: snapshot['managerId'],
-      managerName: snapshot['managerName'],
-      updatedAt: snapshot['updatedAt'] != null
-          ? processedTimestamp(snapshot['updatedAt'])
-          : null,
-    );
+    final raw = snapshot.data();
+    final m = raw is Map<String, dynamic>
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
+    return _trialModelFromMap(m, trialId: snapshot.id);
   }
 
   Map<String, dynamic> toJson() {
@@ -206,4 +156,128 @@ class TrialModel {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+}
+
+TrialModel _trialModelFromMap(
+  Map<String, dynamic> m, {
+  required String trialId,
+}) {
+  return TrialModel(
+    trialId: trialId,
+    litNumber: _trialReadString(m, 'litNumber'),
+    courtId: _trialReadString(m, 'courtId'),
+    courtName: _trialReadString(m, 'courtName'),
+    officeId: _trialReadString(m, 'officeId'),
+    managerId: _trialReadString(m, 'managerId'),
+    managerName: _trialReadString(m, 'managerName'),
+    orgId: _trialReadString(m, 'orgId'),
+    assigneeId: _trialReadString(m, 'assigneeId'),
+    correspondentId: m['correspondentId']?.toString(),
+    correspondentName: _trialReadString(m, 'correspondentName'),
+    lawyerId: _trialReadString(m, 'lawyerId'),
+    status: _trialReadStatus(m),
+    trialDate: _trialReadTrialDate(m),
+    trialOutcome: m['trialOutcome']?.toString(),
+    capitalAmount: _trialReadInt(m, 'capitalAmount'),
+    opposingAttorney: _trialReadString(m, 'opposingAttorney'),
+    opposingAttorneyId: _trialReadString(m, 'opposingAttorneyId'),
+    counselBriefs: _trialReadCounselBriefs(m),
+    scale: m['scale']?.toString(),
+    type: _trialReadType(m),
+    updatedAt: _trialReadTimestampNullable(m, 'updatedAt'),
+  );
+}
+
+String _trialReadString(
+  Map<String, dynamic> m,
+  String key, [
+  String fallback = '',
+]) {
+  final v = m[key];
+  if (v == null) return fallback;
+  return v.toString().trim();
+}
+
+int _trialReadInt(Map<String, dynamic> m, String key) {
+  final v = m[key];
+  if (v == null) return 0;
+  if (v is int) return v;
+  if (v is num) return v.round();
+  return int.tryParse(v.toString()) ?? 0;
+}
+
+Timestamp? _trialReadTimestampNullable(Map<String, dynamic> m, String key) {
+  final raw = m[key];
+  if (raw == null) return null;
+  try {
+    return processedTimestamp(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Firestore / web clients may omit [trialDate] or send values
+/// [processedTimestamp] cannot handle — avoid throwing so the home dashboard loads.
+Timestamp _trialReadTrialDate(Map<String, dynamic> m) {
+  final t = _trialReadTimestampNullable(m, 'trialDate');
+  if (t != null) return t;
+  return Timestamp.fromDate(DateTime.now());
+}
+
+TrialStatus _trialReadStatus(Map<String, dynamic> m) {
+  final v = m['status'];
+  if (v == null) return TrialStatus.pending;
+  final s = v.toString().trim();
+  if (s.isEmpty) return TrialStatus.pending;
+  try {
+    return TrialStatus.values.byName(s);
+  } catch (_) {
+    final lower = s.toLowerCase();
+    for (final e in TrialStatus.values) {
+      if (e.name.toLowerCase() == lower) return e;
+    }
+    final norm = lower.replaceAll(RegExp(r'[\s_-]'), '');
+    for (final e in TrialStatus.values) {
+      if (e.name.toLowerCase().replaceAll('_', '') == norm) return e;
+    }
+    return TrialStatus.pending;
+  }
+}
+
+TrialType _trialReadType(Map<String, dynamic> m) {
+  final v = m['type'];
+  if (v == null) return TrialType.trial;
+  final s = v.toString().trim();
+  if (s.isEmpty) return TrialType.trial;
+  try {
+    return TrialType.values.byName(s);
+  } catch (_) {
+    final lower = s.toLowerCase();
+    for (final e in TrialType.values) {
+      if (e.name.toLowerCase() == lower) return e;
+    }
+    if (lower == 'pretrial' || lower == 'pre-trial' || lower == 'pre_trial') {
+      return TrialType.preTrial;
+    }
+    return TrialType.trial;
+  }
+}
+
+List<UploadFileData>? _trialReadCounselBriefs(Map<String, dynamic> m) {
+  final raw = m['counselBriefs'];
+  if (raw == null || raw is! List) return null;
+  final out = <UploadFileData>[];
+  for (final e in raw) {
+    if (e is! Map) continue;
+    try {
+      out.add(
+        UploadFileData.fromJson(
+          Map<String, dynamic>.from(e),
+        ),
+      );
+    } catch (_) {
+      continue;
+    }
+  }
+  return out.isEmpty ? null : out;
 }

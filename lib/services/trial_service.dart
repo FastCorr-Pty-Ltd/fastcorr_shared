@@ -41,6 +41,25 @@ class TrialService {
   @protected
   Uuid get uuid => _uuid;
 
+  /// Parses trial documents, logging and skipping any that fail to deserialize.
+  List<TrialModel> _trialModelsFromDocs(
+    Iterable<DocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    final out = <TrialModel>[];
+    for (final doc in docs) {
+      if (!doc.exists) continue;
+      try {
+        out.add(TrialModel.fromSnapshot(doc));
+      } catch (e, st) {
+        log(
+          '[TrialService] Skipping malformed trial doc ${doc.id}: $e',
+          stackTrace: st,
+        );
+      }
+    }
+    return out;
+  }
+
   /// Get a single trial by its Firestore document ID.
   Future<TrialModel?> getTrialById(String trialId) async {
     if (trialId.isEmpty) return null;
@@ -102,7 +121,7 @@ class TrialService {
       query = query.orderBy('trialDate');
 
       final snapshot = await query.get();
-      return snapshot.docs.map(TrialModel.fromSnapshot).toList();
+      return _trialModelsFromDocs(snapshot.docs);
     } catch (e, stackTrace) {
       log(
         '[TrialService] Error fetching trials for litNumber $litNumber: $e',
@@ -124,9 +143,8 @@ class TrialService {
           .orderBy('trialDate')
           .snapshots()
           .map(
-            (snapshot) => snapshot.docs
-                .map(TrialModel.fromSnapshot)
-                .toList(growable: false),
+            (snapshot) =>
+                _trialModelsFromDocs(snapshot.docs),
           );
     } catch (e, stackTrace) {
       log(
@@ -155,7 +173,7 @@ class TrialService {
       }
 
       final snapshot = await query.get();
-      return snapshot.docs.map(TrialModel.fromSnapshot).toList();
+      return _trialModelsFromDocs(snapshot.docs);
     } catch (e, stackTrace) {
       log(
         '[TrialService] Error getting trials for lawyer $lawyerId: $e',
@@ -182,7 +200,7 @@ class TrialService {
           .orderBy('trialDate', descending: descending)
           .get();
 
-      return snapshot.docs.map(TrialModel.fromSnapshot).toList();
+      return _trialModelsFromDocs(snapshot.docs);
     } catch (e, stackTrace) {
       log(
         '[TrialService] Error getting ${type.name} trials for lawyer $lawyerId / org $orgId: $e',
