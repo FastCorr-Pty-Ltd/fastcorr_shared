@@ -48,13 +48,9 @@ class TrialService {
     final out = <TrialModel>[];
     for (final doc in docs) {
       if (!doc.exists) continue;
-      try {
-        out.add(TrialModel.fromSnapshot(doc));
-      } catch (e, st) {
-        log(
-          '[TrialService] Skipping malformed trial doc ${doc.id}: $e',
-          stackTrace: st,
-        );
+      final model = TrialModel.tryParseSnapshot(doc);
+      if (model != null) {
+        out.add(model);
       }
     }
     return out;
@@ -68,7 +64,7 @@ class TrialService {
       if (!doc.exists) {
         return null;
       }
-      return TrialModel.fromSnapshot(doc);
+      return TrialModel.tryParseSnapshot(doc);
     } catch (e, stackTrace) {
       log(
         '[TrialService] Error fetching trial by id: $trialId -> $e',
@@ -320,7 +316,13 @@ class TrialService {
             throw Exception('Trial not found');
           }
 
-          trialToProcess = TrialModel.fromSnapshot(trialDoc);
+          final parsed = TrialModel.tryParseSnapshot(trialDoc);
+          if (parsed == null) {
+            throw Exception(
+              'Trial document ${trialDoc.id} could not be parsed (see console)',
+            );
+          }
+          trialToProcess = parsed;
 
           // Enhanced optimistic locking: verify the trial hasn't been modified
           if (trialToProcess.status != existingTrial.status) {
@@ -620,7 +622,8 @@ class TrialService {
             .get();
 
         for (final doc in stalePending.docs) {
-          final trial = TrialModel.fromSnapshot(doc);
+          final trial = TrialModel.tryParseSnapshot(doc);
+          if (trial == null) continue;
           // Only flag if trial date is significantly in the past
           if (trial.trialDate.toDate().isBefore(pastDate)) {
             orphanedTrialIds.add(doc.id);
@@ -669,7 +672,8 @@ class TrialService {
           final trialDoc = await _trialsRef.doc(trialId).get();
           if (!trialDoc.exists) continue;
 
-          final trial = TrialModel.fromSnapshot(trialDoc);
+          final trial = TrialModel.tryParseSnapshot(trialDoc);
+          if (trial == null) continue;
 
           // Only auto-resolve if explicitly requested and trial is very old
           if (autoResolve && trial.status == TrialStatus.pendingConfirmation) {
@@ -752,7 +756,13 @@ class TrialService {
       final uploadedAt = Timestamp.now();
 
       // Get trial to extract litNumber
-      final trial = TrialModel.fromSnapshot(trialDoc);
+      final trial = TrialModel.tryParseSnapshot(trialDoc);
+      if (trial == null) {
+        log(
+          '[TrialService] Could not parse trial for counsel brief upload: $trialId',
+        );
+        return null;
+      }
 
       // Get existing counsel briefs or create new list
       final trialDocData = trialDoc.data();

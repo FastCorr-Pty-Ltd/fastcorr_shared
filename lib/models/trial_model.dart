@@ -1,6 +1,9 @@
+import 'dart:developer' as developer;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fastcorr_shared/utils/utils.dart';
 import 'package:fastcorr_shared/models/upload_file_data.dart';
+import 'package:fastcorr_shared/utils/utils.dart';
+import 'package:flutter/foundation.dart';
 
 enum TrialStatus {
   pending,
@@ -13,6 +16,16 @@ enum TrialStatus {
 }
 
 enum TrialType { trial, preTrial, motion }
+
+/// Thrown by [TrialModel.fromSnapshot] after [TrialModel.tryParseSnapshot] logs details.
+class TrialModelParseException implements Exception {
+  TrialModelParseException(this.documentId, this.message);
+  final String documentId;
+  final String message;
+
+  @override
+  String toString() => 'TrialModelParseException($documentId): $message';
+}
 
 class TrialModel {
   final String trialId;
@@ -72,12 +85,50 @@ class TrialModel {
     );
   }
 
+  /// Parses a Firestore document without throwing; prints rich diagnostics on failure
+  /// (browser console, Flutter console, and `dart:developer` log).
+  static TrialModel? tryParseSnapshot(DocumentSnapshot snapshot) {
+    final id = snapshot.id;
+    Map<String, dynamic>? fieldPreview;
+
+    try {
+      if (!snapshot.exists) {
+        _reportTrialDocumentParseFailure(
+          documentId: id,
+          error: StateError('Document does not exist'),
+          stackTrace: StackTrace.current,
+          fieldPreview: null,
+        );
+        return null;
+      }
+
+      final m = _trialCoerceSnapshotDataToMap(snapshot.data(), documentId: id);
+      if (m == null) return null;
+
+      fieldPreview = m;
+      return _trialModelFromMap(m, trialId: id);
+    } on Object catch (e, st) {
+      _reportTrialDocumentParseFailure(
+        documentId: id,
+        error: e,
+        stackTrace: st,
+        fieldPreview: fieldPreview ?? _trialSnapshotFieldPreview(snapshot),
+      );
+      return null;
+    }
+  }
+
+  /// Strict parse: calls [tryParseSnapshot], then throws [TrialModelParseException]
+  /// if parsing failed (diagnostics are already in the console).
   factory TrialModel.fromSnapshot(DocumentSnapshot snapshot) {
-    final raw = snapshot.data();
-    final m = raw is Map<String, dynamic>
-        ? Map<String, dynamic>.from(raw)
-        : <String, dynamic>{};
-    return _trialModelFromMap(m, trialId: snapshot.id);
+    final parsed = TrialModel.tryParseSnapshot(snapshot);
+    if (parsed == null) {
+      throw TrialModelParseException(
+        snapshot.id,
+        'Parsing failed — search console for "[TrialModel] PARSE FAILURE"',
+      );
+    }
+    return parsed;
   }
 
   Map<String, dynamic> toJson() {
@@ -264,20 +315,137 @@ TrialType _trialReadType(Map<String, dynamic> m) {
 }
 
 List<UploadFileData>? _trialReadCounselBriefs(Map<String, dynamic> m) {
-  final raw = m['counselBriefs'];
-  if (raw == null || raw is! List) return null;
-  final out = <UploadFileData>[];
-  for (final e in raw) {
-    if (e is! Map) continue;
-    try {
-      out.add(
-        UploadFileData.fromJson(
-          Map<String, dynamic>.from(e),
-        ),
-      );
-    } catch (_) {
-      continue;
+  try {
+    final raw = m['counselBriefs'];
+    if (raw == null || raw is! List) return null;
+    final out = <UploadFileData>[];
+    for (final e in raw) {
+      if (e is! Map) continue;
+      try {
+        out.add(
+          UploadFileData.fromJson(
+            Map<String, dynamic>.from(e),
+          ),
+        );
+      } catch (_) {
+        continue;
+      }
     }
+    return out.isEmpty ? null : out;
+  } on Object {
+    return null;
   }
-  return out.isEmpty ? null : out;
+}
+
+void _reportTrialDocumentParseFailure({
+  required String documentId,
+  required Object error,
+  required StackTrace stackTrace,
+  required Map<String, dynamic>? fieldPreview,
+}) {
+  final buf = StringBuffer()
+    ..writeln(
+      '════════════════════════════════════════════════════════════',
+    )
+    ..writeln('[TrialModel] PARSE FAILURE documentId=$documentId')
+    ..writeln('error: $error (${error.runtimeType})');
+
+  if (fieldPreview != null) {
+    buf.writeln('field count: ${fieldPreview.length}');
+    for (final e in fieldPreview.entries) {
+      buf.writeln('  • ${e.key}: ${_trialPreviewField(e.value)}');
+    }
+  } else {
+    buf.writeln('(no field map available)');
+  }
+  buf.writeln('stack:\n$stackTrace');
+  buf.writeln(
+    '════════════════════════════════════════════════════════════',
+  );
+
+  final text = buf.toString();
+  // ignore: avoid_print — intentional: visible in browser DevTools where `log` is easy to miss.
+  print(text);
+  debugPrint(text, wrapWidth: 200);
+  developer.log(
+    '[TrialModel] PARSE FAILURE id=$documentId — $error',
+    name: 'TrialModel',
+    error: error,
+    stackTrace: stackTrace,
+    level: 1000, // severe
+  );
+}
+
+String _trialPreviewField(Object? v) {
+  if (v == null) return 'null';
+  if (v is Timestamp) {
+    return 'Timestamp(${v.toDate().toIso8601String()})';
+  }
+  final s = v.toString();
+  if (s.length > 200) return '${s.substring(0, 200)}…';
+  return '${v.runtimeType}: $s';
+}
+
+/// Best-effort field map for error context only (does not log).
+Map<String, dynamic>? _trialSnapshotFieldPreview(DocumentSnapshot snapshot) {
+  try {
+    final raw = snapshot.data();
+    if (raw == null) return null;
+    if (raw is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(raw);
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(
+        raw.map((k, v) => MapEntry(k.toString(), v)),
+      );
+    }
+  } on Object {
+    return null;
+  }
+  return null;
+}
+
+/// Supports typed queries and transaction reads where [DocumentSnapshot.data] may be
+/// `Map<String, dynamic>` or a loose `Map` (e.g. web interop).
+Map<String, dynamic>? _trialCoerceSnapshotDataToMap(
+  Object? raw, {
+  required String documentId,
+}) {
+  if (raw == null) {
+    _reportTrialDocumentParseFailure(
+      documentId: documentId,
+      error: StateError('snapshot.data() is null'),
+      stackTrace: StackTrace.current,
+      fieldPreview: null,
+    );
+    return null;
+  }
+  try {
+    if (raw is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(raw);
+    }
+    if (raw is Map) {
+      return Map<String, dynamic>.from(
+        raw.map((k, v) => MapEntry(k.toString(), v)),
+      );
+    }
+  } on Object catch (e, st) {
+    _reportTrialDocumentParseFailure(
+      documentId: documentId,
+      error: e,
+      stackTrace: st,
+      fieldPreview: null,
+    );
+    return null;
+  }
+
+  _reportTrialDocumentParseFailure(
+    documentId: documentId,
+    error: FormatException(
+      'Expected Map snapshot data, got ${raw.runtimeType}',
+    ),
+    stackTrace: StackTrace.current,
+    fieldPreview: null,
+  );
+  return null;
 }
