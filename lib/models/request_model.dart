@@ -28,6 +28,42 @@ enum Status {
   escalated,
 }
 
+/// Human-readable label for each [Status].
+///
+/// Consolidated here from the old `OrderStatusExtension` in `order_model.dart`.
+/// With `OrderStatus` now being an alias of `Status`, this extension is the
+/// single source of truth for displaying any request/order status.
+extension StatusDisplayExtension on Status {
+  String get displayName {
+    switch (this) {
+      case Status.pending:
+        return 'Pending';
+      case Status.inProgress:
+        return 'In Progress';
+      case Status.completed:
+        return 'Completed';
+      case Status.readyForPickup:
+        return 'Ready for Pickup';
+      case Status.pickedup:
+        return 'Picked Up';
+      case Status.assigned:
+        return 'Assigned';
+      case Status.canceled:
+        return 'Canceled';
+      case Status.accepted:
+        return 'Accepted';
+      case Status.arrivedAtPickup:
+        return 'Arrived at Pickup';
+      case Status.rejected:
+        return 'Rejected';
+      case Status.overdue:
+        return 'Overdue';
+      case Status.escalated:
+        return 'Escalated';
+    }
+  }
+}
+
 enum OrderType { litigation, messenger }
 
 enum TaskPriority { low, medium, high, urgent }
@@ -195,7 +231,9 @@ class RequestModel {
       status: _parseTaskStatus(json['status']),
       type: _parseTaskType(json['type']),
       orderType: _parseOrderType(json['orderType']),
-      phase: json['phase'],
+      // `phase` is non-nullable but historical docs may be missing it or
+      // have a non-int type. Coerce safely instead of crashing deserialization.
+      phase: _parsePhase(json['phase']),
       // Financial information
       transactionRef: json['transactionRef']?.toString(),
       cost: json['cost']?.toInt(),
@@ -245,7 +283,11 @@ class RequestModel {
       orgId: snap['orgId']?.toString() ?? '',
       driverId: snap['driverId']?.toString() ?? '',
       serviceId: snap['serviceId']?.toString() ?? '',
-      phase: snap['phase'],
+      // Safely extract `phase`: snap['missing'] throws a StateError on
+      // Firestore docs that pre-date this field. Use `.data()` + null-coalesce.
+      phase: _parsePhase(
+        (snap.data() as Map<String, dynamic>?)?['phase'],
+      ),
       // Task details
       notes: snap['notes']?.toString(),
       podFileUrl: snap['podFileUrl']?.toString(),
@@ -690,52 +732,54 @@ class RequestModel {
     }
   }
 
+  // Convert any dynamic value to a safe non-null int for `phase`.
+  // Returns 0 when the value is missing or can't be parsed.
+  static int _parsePhase(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  // Generic enum lookup by name that never throws. If the stored string
+  // doesn't match a known enum value (e.g. a stale/renamed status) we return
+  // null instead of crashing the whole stream via `ArgumentError` from
+  // `Enum.values.byName`.
+  static T? _enumByName<T extends Enum>(Iterable<T> values, String name) {
+    for (final v in values) {
+      if (v.name == name) return v;
+    }
+    return null;
+  }
+
   static Priority _parsePriority(dynamic value) {
     if (value == null) return Priority.standard;
-
+    if (value is Priority) return value;
     if (value is String) {
-      return Priority.values.byName(value);
-    } else if (value is Priority) {
-      return value;
-    } else {
-      return Priority.standard;
+      return _enumByName(Priority.values, value) ?? Priority.standard;
     }
+    return Priority.standard;
   }
 
   static Status? _parseTaskStatus(dynamic value) {
     if (value == null) return null;
-
-    if (value is String) {
-      return Status.values.byName(value);
-    } else if (value is Status) {
-      return value;
-    } else {
-      return null;
-    }
+    if (value is Status) return value;
+    if (value is String) return _enumByName(Status.values, value);
+    return null;
   }
 
   static TaskType? _parseTaskType(dynamic value) {
     if (value == null) return null;
-
-    if (value is String) {
-      return TaskType.values.byName(value);
-    } else if (value is TaskType) {
-      return value;
-    } else {
-      return null;
-    }
+    if (value is TaskType) return value;
+    if (value is String) return _enumByName(TaskType.values, value);
+    return null;
   }
 
   static OrderType? _parseOrderType(dynamic value) {
     if (value == null) return null;
-
-    if (value is String) {
-      return OrderType.values.byName(value);
-    } else if (value is OrderType) {
-      return value;
-    } else {
-      return null;
-    }
+    if (value is OrderType) return value;
+    if (value is String) return _enumByName(OrderType.values, value);
+    return null;
   }
 
   static List<UploadFileData>? _parseInstructions(dynamic value) {
@@ -813,34 +857,25 @@ class RequestModel {
   // Timer-related parse methods
   static TaskTimerStatus? _parseTaskTimerStatus(dynamic value) {
     if (value == null) return null;
-
-    if (value is String) {
-      return TaskTimerStatus.values.byName(value);
-    } else if (value is TaskTimerStatus) {
-      return value;
-    } else {
-      return null;
-    }
+    if (value is TaskTimerStatus) return value;
+    if (value is String) return _enumByName(TaskTimerStatus.values, value);
+    return null;
   }
 
   static ActionType _parseActionType(dynamic value) {
     if (value == null) return ActionType.serve;
+    if (value is ActionType) return value;
     if (value is String) {
-      return ActionType.values.byName(value);
+      return _enumByName(ActionType.values, value) ?? ActionType.serve;
     }
     return ActionType.serve;
   }
 
   static TaskTimerType? _parseTaskTimerType(dynamic value) {
     if (value == null) return null;
-
-    if (value is String) {
-      return TaskTimerType.values.byName(value);
-    } else if (value is TaskTimerType) {
-      return value;
-    } else {
-      return null;
-    }
+    if (value is TaskTimerType) return value;
+    if (value is String) return _enumByName(TaskTimerType.values, value);
+    return null;
   }
 
   static List<TimerExtension>? _parseTimerExtensions(dynamic value) {

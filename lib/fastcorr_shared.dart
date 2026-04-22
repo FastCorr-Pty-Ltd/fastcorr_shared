@@ -17,6 +17,9 @@ export 'models/org_model.dart';
 export 'models/trial_model.dart';
 export 'models/timer_extension.dart';
 
+// Export state machine (Phase A — declaration only; no callers routed yet).
+export 'state/state.dart';
+
 // Export services
 export 'services/office_routing_service.dart';
 export 'services/unified_case_communication_service.dart';

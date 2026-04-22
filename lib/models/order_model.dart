@@ -3,48 +3,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/models/models.dart';
 import 'package:fastcorr_shared/utils/utils.dart';
 
-enum OrderStatus {
-  pending,
-  inProgress,
-  completed,
-  readyForPickup,
-  pickedup,
-  canceled,
-  accepted,
-  arrivedAtPickup,
-  rejected,
-  overdue,
-  escalated,
-}
+/// `OrderStatus` has been consolidated into [Status] (defined in
+/// `request_model.dart`). The two enums had identical semantics for every
+/// shared value; maintaining two copies led to drift and prevented a shared
+/// state machine.
+///
+/// This typedef preserves backwards compatibility for all existing references
+/// like `OrderStatus.pending`, `List<OrderStatus>`, and `OrderStatus.values`.
+/// Call sites can migrate to `Status` at their convenience.
+///
+/// Note: `Status.values` now includes `Status.assigned`, which is reachable
+/// only through the litigation flow. Messenger/delivery orders should never
+/// land on `assigned` — the request state machine enforces this. Dropdowns
+/// that iterate `.values` may want to filter it out per-flow.
+typedef OrderStatus = Status;
 
-extension OrderStatusExtension on OrderStatus {
-  String get displayName {
-    switch (this) {
-      case OrderStatus.pending:
-        return 'Pending';
-      case OrderStatus.inProgress:
-        return 'In Progress';
-      case OrderStatus.completed:
-        return 'Completed';
-      case OrderStatus.readyForPickup:
-        return 'Ready for Pickup';
-      case OrderStatus.pickedup:
-        return 'Picked Up';
-      case OrderStatus.canceled:
-        return 'Canceled';
-      case OrderStatus.accepted:
-        return 'Accepted';
-      case OrderStatus.arrivedAtPickup:
-        return 'Arrived at Pickup';
-      case OrderStatus.rejected:
-        return 'Rejected';
-      case OrderStatus.overdue:
-        return 'Overdue';
-      case OrderStatus.escalated:
-        return 'Escalated';
-    }
-  }
-}
+/// Display-name extension for [OrderStatus] is provided via
+/// [StatusDisplayExtension] in `request_model.dart` (now that `OrderStatus`
+/// is a type alias for `Status`).
 
 class OrderModel {
   final String orderId, serviceTitle;
@@ -52,7 +28,7 @@ class OrderModel {
   final String pickupAddress;
   final GeoPoint? pickupLocation;
   final String senderName, senderPhone, senderEmail;
-  final OrderStatus status;
+  final Status status;
   final List<AddressModel> dropoffList;
 
   final String? instructions;
@@ -110,7 +86,7 @@ class OrderModel {
     senderName: snap['senderName'] ?? '',
     senderPhone: snap['senderPhone'] ?? '',
     senderEmail: snap['senderEmail'] ?? '',
-    status: OrderStatus.values.byName(snap['status']),
+    status: _parseStatus(snap['status']),
     dropoffList: (snap['dropoffList']) == null
         ? []
         : (snap['dropoffList'] as List)
@@ -142,7 +118,7 @@ class OrderModel {
     senderName: json['senderName'] ?? '',
     senderPhone: json['senderPhone'] ?? '',
     senderEmail: json['senderEmail'] ?? '',
-    status: OrderStatus.values.byName(json['status']),
+    status: _parseStatus(json['status']),
     dropoffList: (json['dropoffList']) == null
         ? []
         : (json['dropoffList'] as List)
@@ -175,7 +151,7 @@ class OrderModel {
       'senderName': senderName,
       'senderPhone': senderPhone,
       'senderEmail': senderEmail,
-      'status': status.toString().split('.').last,
+      'status': status.name,
       'dropoffList': dropoffList.map((e) => e.toJson()).toList(),
       'pickupLocation': pickupLocation,
       'instructions': instructions,
@@ -223,7 +199,7 @@ class OrderModel {
     DateTime? arrivedAtPickupAt,
     int? cost,
     int? driverFare,
-    OrderStatus? status,
+    Status? status,
     String? transactionRef,
     String? receiptId,
     bool? selfService,
@@ -285,5 +261,20 @@ class OrderModel {
     } else {
       return null;
     }
+  }
+
+  /// Never-throwing status parser. An unknown / missing / corrupt status
+  /// falls back to [Status.pending]. The previous implementation used
+  /// `Status.values.byName(snap['status'])` which would throw and poison
+  /// entire streams on a single bad document.
+  static Status _parseStatus(dynamic value) {
+    if (value == null) return Status.pending;
+    if (value is Status) return value;
+    if (value is String) {
+      for (final s in Status.values) {
+        if (s.name == value) return s;
+      }
+    }
+    return Status.pending;
   }
 }
