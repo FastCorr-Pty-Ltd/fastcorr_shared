@@ -1,5 +1,6 @@
 import 'package:fastcorr_shared/models/request_model.dart' show Status;
 import 'package:fastcorr_shared/state/actor_role.dart';
+import 'package:fastcorr_shared/state/request_flow.dart';
 import 'package:fastcorr_shared/state/stateful_request.dart';
 import 'package:fastcorr_shared/state/transition.dart';
 import 'package:fastcorr_shared/state/transition_result.dart';
@@ -28,6 +29,21 @@ import 'package:fastcorr_shared/state/transitions.dart';
 /// ```
 class RequestStateMachine {
   RequestStateMachine._();
+
+  /// Every [Status] that appears on any allowed edge for [flow] (from or to).
+  ///
+  /// Use for filter dropdowns so the UI does not offer states that never occur
+  /// in that lifecycle. Order matches [Status.values].
+  static List<Status> statusesAppearingInFlow(RequestFlow flow) {
+    final seen = <Status>{};
+    for (final t in allowedTransitions) {
+      if (t.flows.contains(flow)) {
+        seen.add(t.from);
+        seen.add(t.to);
+      }
+    }
+    return Status.values.where(seen.contains).toList();
+  }
 
   /// Which statuses the given [subject] could legally move to if driven by
   /// [actor]. Useful for gating UI (enable/disable buttons, populate

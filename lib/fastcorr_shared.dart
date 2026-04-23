@@ -21,6 +21,9 @@ export 'models/timer_extension.dart';
 export 'state/state.dart';
 
 // Export services
+export 'services/delivery_order_transition_client.dart';
+export 'services/litigation_request_transition_client.dart';
+export 'services/messenger_dispatch_mirror.dart';
 export 'services/office_routing_service.dart';
 export 'services/unified_case_communication_service.dart';
 export 'services/unified_status_sync_service.dart';

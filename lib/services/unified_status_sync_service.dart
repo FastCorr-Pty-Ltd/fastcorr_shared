@@ -1,9 +1,11 @@
-/// Unified Status Synchronization Service
-/// Handles real-time status synchronization between admin and user apps
+/// Cross-app status sync (logs, batch writes, notifications).
+///
+/// This is **not** the admin state-machine + `dispatch` mirror; that logic
+/// lives only in the admin app (`RequestTransitionService`).
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class UnifiedStatusSyncService {
+class CrossAppStatusSyncService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Collection references

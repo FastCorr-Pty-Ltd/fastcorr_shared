@@ -51,6 +51,30 @@ _Subject msg(Status s, {String? driverId}) =>
 
 void main() {
   // =========================================================================
+  // STATUSES PER FLOW (UI filters)
+  // =========================================================================
+
+  group('statusesAppearingInFlow', () {
+    test('messenger graph is non-empty and ordered like Status.values', () {
+      final m = RequestStateMachine.statusesAppearingInFlow(
+        RequestFlow.messenger,
+      );
+      expect(m, isNotEmpty);
+      for (var i = 1; i < m.length; i++) {
+        expect(m[i - 1].index < m[i].index, isTrue);
+      }
+    });
+
+    test('litigation includes assigned and readyForPickup', () {
+      final lit = RequestStateMachine.statusesAppearingInFlow(
+        RequestFlow.litigation,
+      );
+      expect(lit, contains(Status.assigned));
+      expect(lit, contains(Status.readyForPickup));
+    });
+  });
+
+  // =========================================================================
   // TERMINAL-STATE GUARD
   // =========================================================================
 
