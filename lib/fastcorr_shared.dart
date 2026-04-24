@@ -7,6 +7,7 @@ library fastcorr_shared;
 
 // Export models
 export 'models/unified_case_message.dart';
+export 'models/case_message_metadata.dart';
 export 'models/upload_file_data.dart';
 export 'models/case_model.dart';
 export 'models/request_model.dart';
@@ -16,6 +17,10 @@ export 'models/court_model.dart';
 export 'models/org_model.dart';
 export 'models/trial_model.dart';
 export 'models/timer_extension.dart';
+
+// Communication surface naming + logs (case vs order vs support).
+export 'communication_channel_labels.dart';
+export 'comms_observability.dart';
 
 // Export state machine (Phase A — declaration only; no callers routed yet).
 export 'state/state.dart';

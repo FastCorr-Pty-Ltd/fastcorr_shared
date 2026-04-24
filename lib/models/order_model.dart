@@ -35,6 +35,9 @@ class OrderModel {
   final String? driverId, assigneeId;
   final bool selfService;
 
+  /// Optional link to the matter for navigation (case comms live under this case).
+  final String? caseFileId;
+
   /// Financial information (stored as cents/minor value)
   final int cost;
   final int driverFare;
@@ -75,6 +78,7 @@ class OrderModel {
     this.transactionRef,
     this.receiptId,
     required this.selfService,
+    this.caseFileId,
   });
 
   factory OrderModel.fromSnapshot(DocumentSnapshot snap) => OrderModel(
@@ -107,6 +111,7 @@ class OrderModel {
     transactionRef: snap['transactionRef'] ?? '',
     receiptId: snap['receiptId'] ?? '',
     selfService: snap['selfService'] ?? false,
+    caseFileId: _parseOptionalId(snap['caseFileId']),
   );
 
   factory OrderModel.fromJson(Map<String, dynamic> json) => OrderModel(
@@ -139,6 +144,7 @@ class OrderModel {
     transactionRef: json['transactionRef'] ?? '',
     receiptId: json['receiptId'] ?? '',
     selfService: json['selfService'] ?? false,
+    caseFileId: _parseOptionalId(json['caseFileId']),
   );
 
   Map<String, dynamic> toJson() {
@@ -174,6 +180,7 @@ class OrderModel {
       'transactionRef': transactionRef,
       'receiptId': receiptId,
       'selfService': selfService,
+      if (caseFileId != null && caseFileId!.isNotEmpty) 'caseFileId': caseFileId,
     };
   }
 
@@ -203,6 +210,7 @@ class OrderModel {
     String? transactionRef,
     String? receiptId,
     bool? selfService,
+    String? caseFileId,
   }) => OrderModel(
     orderId: orderId ?? this.orderId,
     serviceTitle: serviceTitle ?? this.serviceTitle,
@@ -229,6 +237,7 @@ class OrderModel {
     transactionRef: transactionRef ?? this.transactionRef,
     receiptId: receiptId ?? this.receiptId,
     selfService: selfService ?? this.selfService,
+    caseFileId: caseFileId ?? this.caseFileId,
   );
 
   /// Get the most recent status change timestamp
@@ -267,6 +276,12 @@ class OrderModel {
   /// falls back to [Status.pending]. The previous implementation used
   /// `Status.values.byName(snap['status'])` which would throw and poison
   /// entire streams on a single bad document.
+  static String? _parseOptionalId(dynamic v) {
+    if (v == null) return null;
+    final s = v.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
   static Status _parseStatus(dynamic value) {
     if (value == null) return Status.pending;
     if (value is Status) return value;

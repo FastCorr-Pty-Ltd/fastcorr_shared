@@ -381,3 +381,30 @@ class UnifiedCaseMessage {
   @override
   int get hashCode => id.hashCode;
 }
+
+/// One page of case communications (cursor-based pagination, newest first).
+class CaseMessagesPageResult {
+  const CaseMessagesPageResult({
+    required this.messages,
+    this.lastDocument,
+    required this.hasMore,
+  });
+
+  final List<UnifiedCaseMessage> messages;
+  final DocumentSnapshot<Object?>? lastDocument;
+  final bool hasMore;
+}
+
+/// Latest window from the live query (newest first), with cursors for loading older.
+class CaseMessagesLiveBatch {
+  const CaseMessagesLiveBatch({
+    required this.messages,
+    required this.orderedQueryDocuments,
+  });
+
+  final List<UnifiedCaseMessage> messages;
+  final List<QueryDocumentSnapshot<Object?>> orderedQueryDocuments;
+
+  DocumentSnapshot<Object?>? get cursorOldestInBatch =>
+      orderedQueryDocuments.isNotEmpty ? orderedQueryDocuments.last : null;
+}

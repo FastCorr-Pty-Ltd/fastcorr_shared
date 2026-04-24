@@ -7,6 +7,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:stacked/stacked.dart';
 import 'package:uuid/uuid.dart';
+import '../comms_observability.dart';
+import '../models/case_message_metadata.dart';
 import '../models/unified_case_message.dart';
 
 /// Service for managing unified case communications across apps
@@ -14,6 +16,9 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final Uuid _uuid = const Uuid();
+
+  static const int kDefaultCaseMessagesLimit = 100;
+  static const int _fullScanPageSize = 200;
 
   /// Get the communications collection reference for a specific case
   CollectionReference _getCommunicationsRef(String orgId, String caseId) {
@@ -28,6 +33,24 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     return _firestore.collection('cases');
   }
 
+  String _newMessageId(String caseId, String? idempotencyKey) {
+    if (idempotencyKey == null || idempotencyKey.isEmpty) {
+      return _uuid.v4();
+    }
+    return caseMessageDocumentId(caseId: caseId, idempotencyKey: idempotencyKey);
+  }
+
+  Map<String, dynamic> _mergeIdempotencyMeta(
+    Map<String, dynamic> metadata,
+    String? idempotencyKey,
+  ) {
+    if (idempotencyKey == null || idempotencyKey.isEmpty) return metadata;
+    return {
+      ...metadata,
+      kCaseMessageMetaIdempotencyKey: idempotencyKey,
+    };
+  }
+
   /// Send a chat message
   Future<String> sendChatMessage({
     required String caseId,
@@ -39,39 +62,67 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     List<DocumentAttachment> attachments = const [],
     String? replyToMessageId,
     Map<String, dynamic> metadata = const {},
+    String? idempotencyKey,
   }) async {
-    try {
-      final messageId = _uuid.v4();
-      final message = UnifiedCaseMessage.chat(
-        id: messageId,
-        caseId: caseId,
-        orgId: orgId,
-        senderId: senderId,
-        senderName: senderName,
-        senderRole: senderRole,
-        content: content,
-        attachments: attachments,
-        replyToMessageId: replyToMessageId,
-        metadata: metadata,
-      );
+    final messageId = _newMessageId(caseId, idempotencyKey);
+    final mergedMeta = _mergeIdempotencyMeta(metadata, idempotencyKey);
+    final message = UnifiedCaseMessage.chat(
+      id: messageId,
+      caseId: caseId,
+      orgId: orgId,
+      senderId: senderId,
+      senderName: senderName,
+      senderRole: senderRole,
+      content: content,
+      attachments: attachments,
+      replyToMessageId: replyToMessageId,
+      metadata: mergedMeta,
+    );
 
+    try {
       await _getCommunicationsRef(
         orgId,
         caseId,
       ).doc(messageId).set(message.toJson());
-
-      // Mark as read by sender
-      await _markAsReadBy(messageId, orgId, caseId, senderId);
-
-      // Update case last activity
-      await _updateCaseLastActivity(orgId, caseId);
-
-      log('✅ Chat message sent: $messageId');
-      return messageId;
     } catch (e) {
-      log('❌ Error sending chat message: $e');
-      rethrow;
+      log('❌ Error writing chat message doc: $e');
+      logCaseCommsSendFailed(
+        caseId: caseId,
+        orgId: orgId,
+        messageId: messageId,
+        stage: CaseCommsSendStage.messageWrite,
+        type: UnifiedMessageType.chatMessage,
+        component: 'UnifiedCaseCommunicationService',
+        error: e,
+      );
+      throw CaseCommsSendException(CaseCommsSendStage.messageWrite, e);
     }
+
+    try {
+      await _markAsReadBy(messageId, orgId, caseId, senderId);
+      await _updateCaseLastActivity(orgId, caseId);
+    } catch (e) {
+      log('❌ Error post-write (chat): $e');
+      logCaseCommsPostWritePartial(
+        caseId: caseId,
+        orgId: orgId,
+        messageId: messageId,
+        type: UnifiedMessageType.chatMessage,
+        component: 'UnifiedCaseCommunicationService',
+        error: e,
+      );
+      throw CaseCommsSendException(CaseCommsSendStage.postWrite, e);
+    }
+
+    logCaseCommsMessageWriteOk(
+      caseId: caseId,
+      orgId: orgId,
+      messageId: messageId,
+      type: UnifiedMessageType.chatMessage,
+      component: 'UnifiedCaseCommunicationService',
+    );
+    log('✅ Chat message sent: $messageId');
+    return messageId;
   }
 
   /// Send a document message
@@ -84,38 +135,66 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     required String content,
     required List<DocumentAttachment> attachments,
     Map<String, dynamic> metadata = const {},
+    String? idempotencyKey,
   }) async {
-    try {
-      final messageId = _uuid.v4();
-      final message = UnifiedCaseMessage.document(
-        id: messageId,
-        caseId: caseId,
-        orgId: orgId,
-        senderId: senderId,
-        senderName: senderName,
-        senderRole: senderRole,
-        content: content,
-        attachments: attachments,
-        metadata: metadata,
-      );
+    final messageId = _newMessageId(caseId, idempotencyKey);
+    final mergedMeta = _mergeIdempotencyMeta(metadata, idempotencyKey);
+    final message = UnifiedCaseMessage.document(
+      id: messageId,
+      caseId: caseId,
+      orgId: orgId,
+      senderId: senderId,
+      senderName: senderName,
+      senderRole: senderRole,
+      content: content,
+      attachments: attachments,
+      metadata: mergedMeta,
+    );
 
+    try {
       await _getCommunicationsRef(
         orgId,
         caseId,
       ).doc(messageId).set(message.toJson());
-
-      // Mark as read by sender
-      await _markAsReadBy(messageId, orgId, caseId, senderId);
-
-      // Update case last activity
-      await _updateCaseLastActivity(orgId, caseId);
-
-      log('✅ Document message sent: $messageId');
-      return messageId;
     } catch (e) {
-      log('❌ Error sending document message: $e');
-      rethrow;
+      log('❌ Error writing document message doc: $e');
+      logCaseCommsSendFailed(
+        caseId: caseId,
+        orgId: orgId,
+        messageId: messageId,
+        stage: CaseCommsSendStage.messageWrite,
+        type: UnifiedMessageType.document,
+        component: 'UnifiedCaseCommunicationService',
+        error: e,
+      );
+      throw CaseCommsSendException(CaseCommsSendStage.messageWrite, e);
     }
+
+    try {
+      await _markAsReadBy(messageId, orgId, caseId, senderId);
+      await _updateCaseLastActivity(orgId, caseId);
+    } catch (e) {
+      log('❌ Error post-write (document): $e');
+      logCaseCommsPostWritePartial(
+        caseId: caseId,
+        orgId: orgId,
+        messageId: messageId,
+        type: UnifiedMessageType.document,
+        component: 'UnifiedCaseCommunicationService',
+        error: e,
+      );
+      throw CaseCommsSendException(CaseCommsSendStage.postWrite, e);
+    }
+
+    logCaseCommsMessageWriteOk(
+      caseId: caseId,
+      orgId: orgId,
+      messageId: messageId,
+      type: UnifiedMessageType.document,
+      component: 'UnifiedCaseCommunicationService',
+    );
+    log('✅ Document message sent: $messageId');
+    return messageId;
   }
 
   /// Create a system log
@@ -184,46 +263,103 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     }
   }
 
-  /// Get real-time stream of case messages
+  /// Real-time window (latest [limit] messages, newest first).
   Stream<List<UnifiedCaseMessage>> getCaseMessagesStream(
     String orgId,
-    String caseId,
-  ) {
+    String caseId, {
+    int limit = kDefaultCaseMessagesLimit,
+  }) {
+    return getCaseMessagesLiveStream(orgId, caseId, limit: limit)
+        .map((b) => b.messages);
+  }
+
+  Stream<CaseMessagesLiveBatch> getCaseMessagesLiveStream(
+    String orgId,
+    String caseId, {
+    int limit = kDefaultCaseMessagesLimit,
+  }) {
     return _getCommunicationsRef(orgId, caseId)
         .orderBy('timestamp', descending: true)
+        .limit(limit)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map(
-                (doc) => UnifiedCaseMessage.fromJson(
-                  doc.data() as Map<String, dynamic>,
-                ),
-              )
-              .toList(),
+          (snapshot) => CaseMessagesLiveBatch(
+            messages: snapshot.docs
+                .map(
+                  (doc) => UnifiedCaseMessage.fromJson(
+                    doc.data() as Map<String, dynamic>,
+                  ),
+                )
+                .toList(),
+            orderedQueryDocuments: snapshot.docs,
+          ),
         );
   }
 
-  /// Get case messages (one-time fetch)
+  Future<CaseMessagesPageResult> getCaseMessagesPage(
+    String orgId,
+    String caseId, {
+    int pageSize = kDefaultCaseMessagesLimit,
+    DocumentSnapshot<Object?>? startAfter,
+  }) async {
+    try {
+      Query query = _getCommunicationsRef(orgId, caseId)
+          .orderBy('timestamp', descending: true)
+          .limit(pageSize);
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+      final snapshot = await query.get();
+      final messages = snapshot.docs
+          .map(
+            (doc) => UnifiedCaseMessage.fromJson(
+              doc.data() as Map<String, dynamic>,
+            ),
+          )
+          .toList();
+      final lastDoc = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
+      return CaseMessagesPageResult(
+        messages: messages,
+        lastDocument: lastDoc,
+        hasMore: snapshot.docs.length == pageSize,
+      );
+    } catch (e) {
+      log('❌ Error getting case messages page: $e');
+      rethrow;
+    }
+  }
+
   Future<List<UnifiedCaseMessage>> getCaseMessages(
+    String orgId,
+    String caseId, {
+    int limit = kDefaultCaseMessagesLimit,
+  }) async {
+    final page = await getCaseMessagesPage(
+      orgId,
+      caseId,
+      pageSize: limit,
+    );
+    return page.messages;
+  }
+
+  Future<List<UnifiedCaseMessage>> _getAllCaseMessagesBatched(
     String orgId,
     String caseId,
   ) async {
-    try {
-      final snapshot = await _getCommunicationsRef(
+    final all = <UnifiedCaseMessage>[];
+    DocumentSnapshot<Object?>? cursor;
+    while (true) {
+      final page = await getCaseMessagesPage(
         orgId,
         caseId,
-      ).orderBy('timestamp', descending: true).get();
-
-      return snapshot.docs
-          .map(
-            (doc) =>
-                UnifiedCaseMessage.fromJson(doc.data() as Map<String, dynamic>),
-          )
-          .toList();
-    } catch (e) {
-      log('❌ Error getting case messages: $e');
-      rethrow;
+        pageSize: _fullScanPageSize,
+        startAfter: cursor,
+      );
+      all.addAll(page.messages);
+      if (!page.hasMore || page.lastDocument == null) break;
+      cursor = page.lastDocument;
     }
+    return all;
   }
 
   /// Mark a message as read by a user
@@ -289,7 +425,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
         caseId,
       ).where('readBy', arrayContains: userId).get();
 
-      final allMessages = await getCaseMessages(orgId, caseId);
+      final allMessages = await _getAllCaseMessagesBatched(orgId, caseId);
       final readMessageIds = snapshot.docs.map((doc) => doc.id).toSet();
 
       return allMessages
@@ -428,7 +564,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     String query,
   ) async {
     try {
-      final allMessages = await getCaseMessages(orgId, caseId);
+      final allMessages = await _getAllCaseMessagesBatched(orgId, caseId);
       return allMessages
           .where(
             (message) =>
@@ -448,7 +584,7 @@ class UnifiedCaseCommunicationService with ListenableServiceMixin {
     String caseId,
   ) async {
     try {
-      final allMessages = await getCaseMessages(orgId, caseId);
+      final allMessages = await _getAllCaseMessagesBatched(orgId, caseId);
 
       final stats = <String, int>{
         'total': allMessages.length,
