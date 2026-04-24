@@ -1,7 +1,9 @@
 /// Cross-app status sync (logs, batch writes, notifications).
 ///
-/// This is **not** the admin state-machine + `dispatch` mirror; that logic
-/// lives only in the admin app (`RequestTransitionService`).
+/// For **litigation request lifecycle** writes from the user app, prefer
+/// [LitigationRequestTransitionClient] (same rules as admin). This service’s
+/// [syncTaskRequestStatus] remains for legacy/audit streams and should not be
+/// used for new lawyer-driven status changes.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
