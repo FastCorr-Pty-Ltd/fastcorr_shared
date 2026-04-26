@@ -5,3 +5,5 @@ export 'unified_status_sync_service.dart';
 export 'document_service.dart';
 export 'trial_service.dart';
 export 'shared_client_alert_service.dart';
+export 'tracked_order_repository.dart';
+export 'tracked_map_service.dart';
