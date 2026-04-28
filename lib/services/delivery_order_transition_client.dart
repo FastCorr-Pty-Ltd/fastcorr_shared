@@ -23,6 +23,9 @@ class DeliveryOrderTransitionClient {
   CollectionReference<Map<String, dynamic>> get _deliveryOrdersRef =>
       _firestore.collection('delivery_orders');
 
+  CollectionReference<Map<String, dynamic>> get _pendingCancelRef =>
+      _firestore.collection('pending_cancellations');
+
   Future<TransitionResult> applyTransition({
     required String orderId,
     required Status to,
@@ -30,6 +33,9 @@ class DeliveryOrderTransitionClient {
     required ActorRole actor,
     String? reason,
     Map<String, dynamic>? mergeFields,
+    String? lawyerEmail,
+    String? lawyerPhone,
+    String? lawyerName,
     DeliveryOrderTransitionSideEffect? alsoInTransaction,
   }) async {
     return _firestore.runTransaction((transaction) async {
@@ -84,15 +90,24 @@ class DeliveryOrderTransitionClient {
         },
       });
 
-      if (actor == ActorRole.lawyer && to == Status.canceled) {
+      if (actor == ActorRole.lawyer && to == Status.cancelPending) {
         transaction.set(
-          _firestore.collection('pending_cancellations').doc(orderId),
+          _pendingCancelRef.doc(orderId),
           buildMessengerPendingCancellationPayload(
             order: fresh,
             officeId: officeId,
+            previousStatus: fresh.status.name,
+            requestCostCents: fresh.cost,
             cancelReason: reason,
+            lawyerEmail: lawyerEmail,
+            lawyerPhone: lawyerPhone,
+            lawyerName: lawyerName,
           ),
         );
+      }
+
+      if (fresh.status == Status.cancelPending && to != Status.cancelPending) {
+        transaction.delete(_pendingCancelRef.doc(orderId));
       }
 
       await MessengerDispatchMirror.applyInTransaction(

@@ -1,4 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'
+    show FieldValue, Timestamp;
 import 'package:fastcorr_shared/models/request_model.dart' show Status;
 import 'package:fastcorr_shared/state/actor_role.dart';
 import 'package:fastcorr_shared/state/transition.dart';
@@ -30,6 +31,17 @@ Map<String, dynamic> buildRequestStatusPatch({
       reason != null &&
       reason.isNotEmpty) {
     map[transition.reasonField!] = reason;
+  }
+
+  if (to == Status.cancelPending) {
+    map['statusBeforeCancelPending'] = transition.from.name;
+  }
+
+  if (transition.from == Status.cancelPending) {
+    if (to != Status.cancelPending) {
+      map['statusBeforeCancelPending'] = FieldValue.delete();
+      map['cancelPendingAt'] = FieldValue.delete();
+    }
   }
 
   if (to == Status.canceled) {

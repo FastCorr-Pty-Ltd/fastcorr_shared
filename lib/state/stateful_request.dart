@@ -28,4 +28,8 @@ abstract class StatefulRequest {
 
   /// The opaque document id (for error messages / logging only).
   String get subjectId;
+
+  /// When [currentStatus] is [Status.cancelPending], the status name before the
+  /// lawyer requested cancellation (used to validate reactivation edges).
+  String? get statusBeforeCancelPending;
 }

@@ -25,6 +25,9 @@ class LitigationRequestTransitionClient {
   CollectionReference<Map<String, dynamic>> get _reqRef =>
       _firestore.collection('litigation_requests');
 
+  CollectionReference<Map<String, dynamic>> get _pendingCancelRef =>
+      _firestore.collection('pending_cancellations');
+
   /// Optional [alsoInTransaction] runs after the request doc, activity, and
   /// pending-cancellation writes (e.g. QR doc updates in the driver app).
   Future<TransitionResult> applyTransition({
@@ -34,6 +37,9 @@ class LitigationRequestTransitionClient {
     required ActorRole actor,
     String? reason,
     Map<String, dynamic>? mergeFields,
+    String? lawyerEmail,
+    String? lawyerPhone,
+    String? lawyerName,
     LitigationTransitionSideEffect? alsoInTransaction,
   }) async {
     return _firestore.runTransaction((transaction) async {
@@ -85,14 +91,24 @@ class LitigationRequestTransitionClient {
         },
       });
 
-      if (actor == ActorRole.lawyer && to == Status.canceled) {
+      if (actor == ActorRole.lawyer && to == Status.cancelPending) {
+        final prev = fresh.status ?? Status.pending;
         transaction.set(
-          _firestore.collection('pending_cancellations').doc(orderId),
+          _pendingCancelRef.doc(orderId),
           buildLitigationPendingCancellationPayload(
             request: fresh,
+            previousStatus: prev.name,
+            requestCostCents: fresh.cost ?? 0,
             cancelReason: reason,
+            lawyerEmail: lawyerEmail,
+            lawyerPhone: lawyerPhone,
+            lawyerName: lawyerName,
           ),
         );
+      }
+
+      if (fresh.status == Status.cancelPending && to != Status.cancelPending) {
+        transaction.delete(_pendingCancelRef.doc(orderId));
       }
 
       if (alsoInTransaction != null) {

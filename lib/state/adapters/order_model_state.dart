@@ -26,4 +26,7 @@ class OrderModelState implements StatefulRequest {
 
   @override
   String get subjectId => _order.orderId;
+
+  @override
+  String? get statusBeforeCancelPending => _order.statusBeforeCancelPending;
 }

@@ -16,12 +16,13 @@ import 'package:fastcorr_shared/state/transition.dart';
 ///     ready-for-pickup). **Correspondents** do NOT — they are a distinct
 ///     role that does not self-claim or progress litigation work, and
 ///     therefore do not appear in any row of this table.
-///   - **Lawyers** can cancel up through `inProgress` but NOT from
-///     `readyForPickup` (work's done; admin owns refund decisions). A
-///     lawyer cancel is a direct transition to `canceled`; the follow-up
-///     credit rollback is a separate admin workflow (filter on
-///     `canceledBy == lawyer` in the office-admin dashboard), NOT a state
-///     machine concern.
+///   - **Lawyers** request cancellation up through `inProgress` (and
+///     `pending` for both flows) via `cancelPending`, which pauses the
+///     request until an office admin **approves** (final `canceled` + credit
+///     refund) or **reverses** (restore `statusBeforeCancelPending`). A
+///     lawyer may also **reactivate** while `cancelPending` by transitioning
+///     back to the stored prior status. `readyForPickup` and later remain
+///     admin-only for cancellation.
 ///   - **Office admins** own escalation handling and recovery within their
 ///     office scope. Super admins are intentionally NOT granted recovery
 ///     permissions — if a super admin needs to intervene, they do so by
@@ -41,8 +42,8 @@ import 'package:fastcorr_shared/state/transition.dart';
 ///   (9) Recovery from escalated / overdue (office admin)
 ///
 /// Terminal states (no outgoing transitions): `completed`, `canceled`,
-/// `rejected`. `overdue` and `escalated` are NOT terminal — they have
-/// recovery edges.
+/// `rejected`. `cancelPending` is a pause state (awaiting admin).
+/// `overdue` and `escalated` are NOT terminal — they have recovery edges.
 const List<Transition> allowedTransitions = [
   // =========================================================================
   // (1) ENTRY POINTS FROM `pending`
@@ -74,23 +75,23 @@ const List<Transition> allowedTransitions = [
     notifies: {ActorRole.lawyer},
   ),
 
-  // --- Lawyer-initiated cancellation while still pending (both flows).
-  // No reason required here: nothing's started, friction should be minimal.
-  //
-  // POLICY: a lawyer-initiated cancellation triggers a credit-rollback
-  // review workflow handled by the office admin dashboard. The rollback
-  // itself is NOT modelled here — the state goes straight to `canceled`
-  // with `canceledBy: lawyer`, and the admin dashboard filters on that
-  // combination to surface cases awaiting financial approval.
+  // --- Lawyer requests cancellation review (soft cancel). Office admin
+  // finalizes to `canceled` (and credits) or reverses to the prior status.
+  Transition(
+    from: Status.pending,
+    to: Status.cancelPending,
+    flows: {RequestFlow.litigation, RequestFlow.messenger},
+    actors: {ActorRole.lawyer},
+    timestampField: 'cancelPendingAt',
+    notifies: {ActorRole.officeAdmin},
+  ),
+
+  // --- Office admin: immediate cancel without `cancelPending` (support).
   Transition(
     from: Status.pending,
     to: Status.canceled,
     flows: {RequestFlow.litigation, RequestFlow.messenger},
-    actors: {
-      ActorRole.lawyer,
-      ActorRole.officeAdmin,
-      ActorRole.superAdmin,
-    },
+    actors: {ActorRole.officeAdmin, ActorRole.superAdmin},
     timestampField: 'canceledAt',
     notifies: {ActorRole.lawyer, ActorRole.officeAdmin},
   ),
@@ -148,27 +149,45 @@ const List<Transition> allowedTransitions = [
   // (4) CANCELLATION AFTER WORK HAS STARTED
   // =========================================================================
 
-  // --- Litigation assigned → canceled.
+  // --- Lawyer: request cancel review. Admins: force-cancel to `canceled`.
+  Transition(
+    from: Status.assigned,
+    to: Status.cancelPending,
+    flows: {RequestFlow.litigation},
+    actors: {ActorRole.lawyer},
+    timestampField: 'cancelPendingAt',
+    requiresReason: true,
+    reasonField: 'cancelReason',
+    notifies: {ActorRole.officeAdmin},
+  ),
+
   Transition(
     from: Status.assigned,
     to: Status.canceled,
     flows: {RequestFlow.litigation},
-    actors: {ActorRole.lawyer, ActorRole.officeAdmin, ActorRole.superAdmin},
+    actors: {ActorRole.officeAdmin, ActorRole.superAdmin},
     timestampField: 'canceledAt',
     requiresReason: true,
     reasonField: 'cancelReason',
     notifies: {ActorRole.lawyer, ActorRole.secretary, ActorRole.officeAdmin},
-    policyNote:
-        'Lawyer cancel triggers office-admin credit-rollback review via '
-        'a `canceledBy == lawyer` dashboard filter; the rollback itself '
-        'is a separate workflow, not a state-machine concern.',
+  ),
+
+  Transition(
+    from: Status.inProgress,
+    to: Status.cancelPending,
+    flows: {RequestFlow.litigation},
+    actors: {ActorRole.lawyer},
+    timestampField: 'cancelPendingAt',
+    requiresReason: true,
+    reasonField: 'cancelReason',
+    notifies: {ActorRole.officeAdmin},
   ),
 
   Transition(
     from: Status.inProgress,
     to: Status.canceled,
     flows: {RequestFlow.litigation},
-    actors: {ActorRole.lawyer, ActorRole.officeAdmin, ActorRole.superAdmin},
+    actors: {ActorRole.officeAdmin, ActorRole.superAdmin},
     timestampField: 'canceledAt',
     requiresReason: true,
     reasonField: 'cancelReason',
@@ -198,6 +217,68 @@ const List<Transition> allowedTransitions = [
     requiresReason: true,
     reasonField: 'cancelReason',
     notifies: {ActorRole.lawyer, ActorRole.driver},
+  ),
+
+  // =========================================================================
+  // (4b) `cancelPending` — lawyer reactivation or admin final cancel
+  // =========================================================================
+
+  Transition(
+    from: Status.cancelPending,
+    to: Status.pending,
+    flows: {RequestFlow.litigation, RequestFlow.messenger},
+    actors: {
+      ActorRole.lawyer,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+    },
+    precondition: _restoreToPending,
+    preconditionDescription:
+        'reactivation only restores the status stored before cancelPending',
+    notifies: {ActorRole.officeAdmin},
+  ),
+
+  Transition(
+    from: Status.cancelPending,
+    to: Status.assigned,
+    flows: {RequestFlow.litigation},
+    actors: {
+      ActorRole.lawyer,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+    },
+    precondition: _restoreToAssigned,
+    preconditionDescription:
+        'reactivation only restores the status stored before cancelPending',
+    notifies: {ActorRole.secretary, ActorRole.officeAdmin},
+  ),
+
+  Transition(
+    from: Status.cancelPending,
+    to: Status.inProgress,
+    flows: {RequestFlow.litigation},
+    actors: {
+      ActorRole.lawyer,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+    },
+    precondition: _restoreToInProgress,
+    preconditionDescription:
+        'reactivation only restores the status stored before cancelPending',
+    notifies: {ActorRole.secretary, ActorRole.officeAdmin},
+  ),
+
+  Transition(
+    from: Status.cancelPending,
+    to: Status.canceled,
+    flows: {RequestFlow.litigation, RequestFlow.messenger},
+    actors: {
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+      ActorRole.system,
+    },
+    timestampField: 'canceledAt',
+    notifies: {ActorRole.lawyer, ActorRole.secretary, ActorRole.driver},
   ),
 
   // =========================================================================
@@ -544,7 +625,16 @@ const Set<Status> terminalStates = {
   Status.rejected,
 };
 
-// ---- Preconditions -------------------------------------------------------
+// ---- Preconditions: restore after soft-cancel --------------------------------
+
+bool _restoreToPending(StatefulRequest s) =>
+    s.statusBeforeCancelPending == Status.pending.name;
+
+bool _restoreToAssigned(StatefulRequest s) =>
+    s.statusBeforeCancelPending == Status.assigned.name;
+
+bool _restoreToInProgress(StatefulRequest s) =>
+    s.statusBeforeCancelPending == Status.inProgress.name;
 
 /// Driver-ownership guard used on all pickup / arrival / delivery rows.
 bool _hasDriver(StatefulRequest subject) {

@@ -30,6 +30,10 @@ import 'package:fastcorr_shared/state/transitions.dart';
 class RequestStateMachine {
   RequestStateMachine._();
 
+  /// True when the request is paused awaiting admin approval of cancellation.
+  static bool isPausedForCancellation(StatefulRequest subject) =>
+      subject.currentStatus == Status.cancelPending;
+
   /// Every [Status] that appears on any allowed edge for [flow] (from or to).
   ///
   /// Use for filter dropdowns so the UI does not offer states that never occur

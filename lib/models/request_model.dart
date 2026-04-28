@@ -26,6 +26,9 @@ enum Status {
   rejected,
   overdue,
   escalated,
+
+  /// Lawyer requested cancellation; awaits office approval before final cancel/refund.
+  cancelPending,
 }
 
 /// Human-readable label for each [Status].
@@ -60,6 +63,8 @@ extension StatusDisplayExtension on Status {
         return 'Overdue';
       case Status.escalated:
         return 'Escalated';
+      case Status.cancelPending:
+        return 'Cancellation pending review';
     }
   }
 }
@@ -145,6 +150,10 @@ class RequestModel {
   final DateTime? acceptedAt;
   final DateTime? arrivedAtPickupAt;
 
+  /// Set while [status] is [Status.cancelPending] (for reactivation / admin).
+  final String? statusBeforeCancelPending;
+  final DateTime? cancelPendingAt;
+
   /// Timer-related fields
   final DateTime? timerExpiryTime; // Calculated expiry time
   final DateTime? escalationTime; // When to escalate to super admin
@@ -191,6 +200,8 @@ class RequestModel {
     this.pickedupAt,
     this.acceptedAt,
     this.arrivedAtPickupAt,
+    this.statusBeforeCancelPending,
+    this.cancelPendingAt,
     this.timerExpiryTime,
     this.escalationTime,
     this.timerStatus,
@@ -249,6 +260,8 @@ class RequestModel {
       pickedupAt: _parseDateTime(json['pickedupAt']),
       acceptedAt: _parseDateTime(json['acceptedAt']),
       arrivedAtPickupAt: _parseDateTime(json['arrivedAtPickupAt']),
+      statusBeforeCancelPending: json['statusBeforeCancelPending']?.toString(),
+      cancelPendingAt: _parseDateTime(json['cancelPendingAt']),
 
       // Timer-related fields
       timerExpiryTime: _parseDateTime(json['timerExpiryTime']),
@@ -314,6 +327,8 @@ class RequestModel {
       pickedupAt: _parseTimestamp(snap['pickedupAt']),
       acceptedAt: _parseTimestamp(snap['acceptedAt']),
       arrivedAtPickupAt: _parseTimestamp(snap['arrivedAtPickupAt']),
+      statusBeforeCancelPending: snap['statusBeforeCancelPending']?.toString(),
+      cancelPendingAt: _parseTimestamp(snap['cancelPendingAt']),
 
       // Timer-related fields
       timerExpiryTime: _parseTimestamp(snap['timerExpiryTime']),
@@ -384,6 +399,10 @@ class RequestModel {
       'arrivedAtPickupAt': arrivedAtPickupAt != null
           ? Timestamp.fromDate(arrivedAtPickupAt!)
           : null,
+      if (statusBeforeCancelPending != null)
+        'statusBeforeCancelPending': statusBeforeCancelPending,
+      if (cancelPendingAt != null)
+        'cancelPendingAt': Timestamp.fromDate(cancelPendingAt!),
 
       // Timer-related fields
       'timerExpiryTime': timerExpiryTime != null
@@ -439,6 +458,8 @@ class RequestModel {
     DateTime? pickedupAt,
     DateTime? acceptedAt,
     DateTime? arrivedAtPickupAt,
+    String? statusBeforeCancelPending,
+    DateTime? cancelPendingAt,
     DateTime? timerExpiryTime,
     DateTime? escalationTime,
     TaskTimerStatus? timerStatus,
@@ -486,6 +507,9 @@ class RequestModel {
       pickedupAt: pickedupAt ?? this.pickedupAt,
       acceptedAt: acceptedAt ?? this.acceptedAt,
       arrivedAtPickupAt: arrivedAtPickupAt ?? this.arrivedAtPickupAt,
+      statusBeforeCancelPending:
+          statusBeforeCancelPending ?? this.statusBeforeCancelPending,
+      cancelPendingAt: cancelPendingAt ?? this.cancelPendingAt,
       timerExpiryTime: timerExpiryTime ?? this.timerExpiryTime,
       escalationTime: escalationTime ?? this.escalationTime,
       timerStatus: timerStatus ?? this.timerStatus,
@@ -506,7 +530,14 @@ class RequestModel {
 
   /// Check if task is overdue
   bool get isOverdue {
-    return dueDate.isBefore(DateTime.now()) && status != Status.completed;
+    final s = status;
+    if (s == Status.completed ||
+        s == Status.canceled ||
+        s == Status.rejected ||
+        s == Status.cancelPending) {
+      return false;
+    }
+    return dueDate.isBefore(DateTime.now());
   }
 
   /// Get days until deadline
@@ -607,6 +638,8 @@ class RequestModel {
         return Colors.orange;
       case Status.canceled:
         return Colors.red;
+      case Status.cancelPending:
+        return Colors.deepOrange;
       case Status.accepted:
         return Colors.blue;
       case Status.arrivedAtPickup:
@@ -691,6 +724,8 @@ class RequestModel {
         return 'Picked Up';
       case Status.canceled:
         return 'Canceled';
+      case Status.cancelPending:
+        return 'Cancellation pending review';
       case Status.accepted:
         return 'Accepted';
       case Status.arrivedAtPickup:

@@ -52,6 +52,10 @@ class OrderModel {
   final DateTime? acceptedAt;
   final DateTime? arrivedAtPickupAt;
 
+  /// Set while [status] is [Status.cancelPending] (messenger).
+  final String? statusBeforeCancelPending;
+  final DateTime? cancelPendingAt;
+
   OrderModel({
     required this.orderId,
     required this.serviceTitle,
@@ -73,6 +77,8 @@ class OrderModel {
     this.pickedupAt,
     this.acceptedAt,
     this.arrivedAtPickupAt,
+    this.statusBeforeCancelPending,
+    this.cancelPendingAt,
     required this.cost,
     required this.driverFare,
     this.transactionRef,
@@ -81,38 +87,18 @@ class OrderModel {
     this.caseFileId,
   });
 
-  factory OrderModel.fromSnapshot(DocumentSnapshot snap) => OrderModel(
-    orderId: snap['orderId'] ?? '',
-    serviceTitle: snap['serviceTitle'] ?? '',
-    orgId: snap['orgId'] ?? '',
-    lawyerId: snap['lawyerId'] ?? '',
-    pickupAddress: snap['pickupAddress'] ?? '',
-    senderName: snap['senderName'] ?? '',
-    senderPhone: snap['senderPhone'] ?? '',
-    senderEmail: snap['senderEmail'] ?? '',
-    status: _parseStatus(snap['status']),
-    dropoffList: (snap['dropoffList']) == null
-        ? []
-        : (snap['dropoffList'] as List)
-              .map((e) => AddressModel.fromJson(e))
-              .toList(),
-    pickupLocation: processedGeoPoint(snap['pickupLocation']),
-    instructions: snap['instructions'] ?? '',
-    driverId: snap['driverId'] ?? '',
-    assigneeId: snap['assigneeId'] ?? '',
-    readyForPickupAt: _parseTimestamp(snap['readyForPickupAt']),
-    completedAt: _parseTimestamp(snap['completedAt']),
-    canceledAt: _parseTimestamp(snap['canceledAt']),
-    pickedupAt: _parseTimestamp(snap['pickedupAt']),
-    acceptedAt: _parseTimestamp(snap['acceptedAt']),
-    arrivedAtPickupAt: _parseTimestamp(snap['arrivedAtPickupAt']),
-    cost: snap['cost']?.toInt() ?? 0,
-    driverFare: snap['driverFare']?.toInt() ?? 0,
-    transactionRef: snap['transactionRef'] ?? '',
-    receiptId: snap['receiptId'] ?? '',
-    selfService: snap['selfService'] ?? false,
-    caseFileId: _parseOptionalId(snap['caseFileId']),
-  );
+  /// Builds an [OrderModel] from a Firestore document.
+  ///
+  /// Delegates to [fromJson] so we have a single deserializer. This matters
+  /// because `DocumentSnapshot.operator[]` throws `StateError` on missing
+  /// fields (whereas `Map['missingKey']` returns null). [toJson] writes
+  /// `caseFileId` only when non-empty, so messenger orders without a linked
+  /// case have no such field on disk - the old `snap['caseFileId']` access
+  /// crashed the order-tracking stream when it encountered one.
+  factory OrderModel.fromSnapshot(DocumentSnapshot snap) {
+    final data = snap.data() as Map<String, dynamic>? ?? const {};
+    return OrderModel.fromJson(data);
+  }
 
   factory OrderModel.fromJson(Map<String, dynamic> json) => OrderModel(
     orderId: json['orderId'] ?? '',
@@ -139,6 +125,8 @@ class OrderModel {
     pickedupAt: _parseTimestamp(json['pickedupAt']),
     acceptedAt: _parseTimestamp(json['acceptedAt']),
     arrivedAtPickupAt: _parseTimestamp(json['arrivedAtPickupAt']),
+    statusBeforeCancelPending: json['statusBeforeCancelPending']?.toString(),
+    cancelPendingAt: _parseTimestamp(json['cancelPendingAt']),
     cost: json['cost']?.toInt() ?? 0,
     driverFare: json['driverFare']?.toInt() ?? 0,
     transactionRef: json['transactionRef'] ?? '',
@@ -175,6 +163,10 @@ class OrderModel {
       'arrivedAtPickupAt': arrivedAtPickupAt != null
           ? Timestamp.fromDate(arrivedAtPickupAt!)
           : null,
+      if (statusBeforeCancelPending != null)
+        'statusBeforeCancelPending': statusBeforeCancelPending,
+      if (cancelPendingAt != null)
+        'cancelPendingAt': Timestamp.fromDate(cancelPendingAt!),
       'cost': cost,
       'driverFare': driverFare,
       'transactionRef': transactionRef,
@@ -204,6 +196,8 @@ class OrderModel {
     DateTime? pickedupAt,
     DateTime? acceptedAt,
     DateTime? arrivedAtPickupAt,
+    String? statusBeforeCancelPending,
+    DateTime? cancelPendingAt,
     int? cost,
     int? driverFare,
     Status? status,
@@ -231,6 +225,9 @@ class OrderModel {
     pickedupAt: pickedupAt ?? this.pickedupAt,
     acceptedAt: acceptedAt ?? this.acceptedAt,
     arrivedAtPickupAt: arrivedAtPickupAt ?? this.arrivedAtPickupAt,
+    statusBeforeCancelPending:
+        statusBeforeCancelPending ?? this.statusBeforeCancelPending,
+    cancelPendingAt: cancelPendingAt ?? this.cancelPendingAt,
     cost: cost ?? this.cost,
     driverFare: driverFare ?? this.driverFare,
     status: status ?? this.status,
