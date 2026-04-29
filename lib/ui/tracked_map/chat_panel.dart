@@ -1,4 +1,7 @@
+import 'dart:developer' as developer;
+
 import 'package:fastcorr_shared/models/chat_msg_model.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 /// Lightweight chat panel for the tracking screen.
@@ -93,14 +96,25 @@ class _ChatPanelState extends State<ChatPanel> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
+                final err = snapshot.error;
+                developer.log(
+                  'ChatPanel stream error: $err',
+                  name: 'OrderChat',
+                  error: err,
+                  stackTrace: snapshot.stackTrace,
+                );
+                final detail = err is FirebaseException
+                    ? '${err.code}: ${err.message ?? err.toString()}'
+                    : err.toString();
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Could not load messages',
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                    child: SelectableText(
+                      'Could not load messages.\n$detail',
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.error,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 );

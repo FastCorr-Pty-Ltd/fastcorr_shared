@@ -32,20 +32,54 @@ class ChatMsgModel {
   });
 
   factory ChatMsgModel.fromSnapshot(DocumentSnapshot snap) {
-    final data = snap.data() as Map<String, dynamic>;
+    final raw = snap.data();
+    final data = raw is Map<String, dynamic>
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
+    data['id'] = (data['id'] as String?)?.isNotEmpty == true ? data['id'] : snap.id;
     return ChatMsgModel.fromJson(data);
+  }
+
+  static DateTime _parseCreatedAt(dynamic v) {
+    if (v == null) return DateTime.now();
+    if (v is Timestamp) return v.toDate();
+    if (v is DateTime) return v;
+    if (v is String && v.isNotEmpty) {
+      try {
+        return DateTime.parse(v);
+      } catch (_) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  static SenderRole _parseSenderRole(dynamic v) {
+    if (v is! String || v.isEmpty) return SenderRole.system;
+    try {
+      return SenderRole.values.byName(v);
+    } catch (_) {
+      return SenderRole.system;
+    }
+  }
+
+  static MessageType _parseMessageType(dynamic v) {
+    if (v is! String || v.isEmpty) return MessageType.text;
+    try {
+      return MessageType.values.byName(v);
+    } catch (_) {
+      return MessageType.text;
+    }
   }
 
   factory ChatMsgModel.fromJson(Map<String, dynamic> json) {
     return ChatMsgModel(
       id: json['id'] ?? '',
       senderName: json['senderName'] ?? '',
-      senderRole: SenderRole.values.byName(json['senderRole']),
+      senderRole: _parseSenderRole(json['senderRole']),
       content: json['content'] ?? '',
-      type: MessageType.values.byName(json['type']),
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
+      type: _parseMessageType(json['type']),
+      createdAt: _parseCreatedAt(json['createdAt']),
       isRead: json['isRead'] ?? false,
       fileName: json['fileName'],
       fileSize: json['fileSize'],

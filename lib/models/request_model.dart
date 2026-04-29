@@ -279,69 +279,69 @@ class RequestModel {
   }
 
   factory RequestModel.fromSnapshot(DocumentSnapshot snap) {
+    // `DocumentSnapshot.operator[]` throws `StateError` when a field is absent
+    // on disk (e.g. after `FieldValue.delete()` on withdrawal). Read via `.data()`.
+    final data = snap.data() as Map<String, dynamic>? ?? const {};
+
     return RequestModel(
       // Core fields
       orderId: snap.id,
-      title: snap['title']?.toString() ?? '',
-      lawyerId: snap['lawyerId']?.toString() ?? '',
-      createdAt: _parseTimestamp(snap['createdAt']) ?? DateTime.now(),
-      dueDate: _parseTimestamp(snap['dueDate']) ?? DateTime.now(),
-      priority: _parsePriority(snap['priority']),
+      title: data['title']?.toString() ?? '',
+      lawyerId: data['lawyerId']?.toString() ?? '',
+      createdAt: _parseTimestamp(data['createdAt']) ?? DateTime.now(),
+      dueDate: _parseTimestamp(data['dueDate']) ?? DateTime.now(),
+      priority: _parsePriority(data['priority']),
 
       // Related entity IDs
-      caseFileId: snap['caseFileId']?.toString() ?? '',
-      courtId: snap['courtId']?.toString() ?? '',
-      officeId: snap['officeId']?.toString() ?? '',
-      assigneeId: snap['assigneeId']?.toString() ?? '',
-      orgId: snap['orgId']?.toString() ?? '',
-      driverId: snap['driverId']?.toString() ?? '',
-      serviceId: snap['serviceId']?.toString() ?? '',
-      // Safely extract `phase`: snap['missing'] throws a StateError on
-      // Firestore docs that pre-date this field. Use `.data()` + null-coalesce.
-      phase: _parsePhase(
-        (snap.data() as Map<String, dynamic>?)?['phase'],
-      ),
+      caseFileId: data['caseFileId']?.toString() ?? '',
+      courtId: data['courtId']?.toString() ?? '',
+      officeId: data['officeId']?.toString() ?? '',
+      assigneeId: data['assigneeId']?.toString() ?? '',
+      orgId: data['orgId']?.toString() ?? '',
+      driverId: data['driverId']?.toString() ?? '',
+      serviceId: data['serviceId']?.toString() ?? '',
+      phase: _parsePhase(data['phase']),
       // Task details
-      notes: snap['notes']?.toString(),
-      podFileUrl: snap['podFileUrl']?.toString(),
-      cancelReason: snap['cancelReason']?.toString(),
-      instructions: _parseInstructionsFromSnapshot(snap['instructions']),
-      followupDocs: _parseFollowupDocsFromSnapshot(snap['followupDocs']),
-      dropoffList: _parseDropoffListFromSnapshot(snap['dropoffList']),
-      status: _parseTaskStatus(snap['status']),
-      type: _parseTaskType(snap['type']),
-      orderType: _parseOrderType(snap['orderType']),
-      actionType: _parseActionType(snap['actionType']),
+      notes: data['notes']?.toString(),
+      podFileUrl: data['podFileUrl']?.toString(),
+      cancelReason: data['cancelReason']?.toString(),
+      instructions: _parseInstructionsFromSnapshot(data['instructions']),
+      followupDocs: _parseFollowupDocsFromSnapshot(data['followupDocs']),
+      dropoffList: _parseDropoffListFromSnapshot(data['dropoffList']),
+      status: _parseTaskStatus(data['status']),
+      type: _parseTaskType(data['type']),
+      orderType: _parseOrderType(data['orderType']),
+      actionType: _parseActionType(data['actionType']),
       // Financial information
-      transactionRef: snap['transactionRef']?.toString(),
-      cost: snap['cost']?.toInt(),
-      driverFare: snap['driverFare']?.toInt(),
-      selfService: snap['selfService'] as bool? ?? false,
+      transactionRef: data['transactionRef']?.toString(),
+      cost: data['cost']?.toInt(),
+      driverFare: data['driverFare']?.toInt(),
+      selfService: data['selfService'] as bool? ?? false,
 
       // Status tracking timestamps
-      readyForPickupAt: _parseTimestamp(snap['readyForPickupAt']),
-      assignedAt: _parseTimestamp(snap['assignedAt']),
-      completedAt: _parseTimestamp(snap['completedAt']),
-      canceledAt: _parseTimestamp(snap['canceledAt']),
-      dispatchedAt: _parseTimestamp(snap['dispatchedAt']),
-      pickedupAt: _parseTimestamp(snap['pickedupAt']),
-      acceptedAt: _parseTimestamp(snap['acceptedAt']),
-      arrivedAtPickupAt: _parseTimestamp(snap['arrivedAtPickupAt']),
-      statusBeforeCancelPending: snap['statusBeforeCancelPending']?.toString(),
-      cancelPendingAt: _parseTimestamp(snap['cancelPendingAt']),
+      readyForPickupAt: _parseTimestamp(data['readyForPickupAt']),
+      assignedAt: _parseTimestamp(data['assignedAt']),
+      completedAt: _parseTimestamp(data['completedAt']),
+      canceledAt: _parseTimestamp(data['canceledAt']),
+      dispatchedAt: _parseTimestamp(data['dispatchedAt']),
+      pickedupAt: _parseTimestamp(data['pickedupAt']),
+      acceptedAt: _parseTimestamp(data['acceptedAt']),
+      arrivedAtPickupAt: _parseTimestamp(data['arrivedAtPickupAt']),
+      statusBeforeCancelPending: data['statusBeforeCancelPending']?.toString(),
+      cancelPendingAt: _parseTimestamp(data['cancelPendingAt']),
 
       // Timer-related fields
-      timerExpiryTime: _parseTimestamp(snap['timerExpiryTime']),
-      escalationTime: _parseTimestamp(snap['escalationTime']),
-      timerStatus: _parseTaskTimerStatus(snap['timerStatus']),
-      timerType: _parseTaskTimerType(snap['timerType']),
-      lastAssignedTo: snap['lastAssignedTo'] ?? '',
-      lastAssignedAt: _parseTimestamp(snap['lastAssignedAt']),
+      timerExpiryTime: _parseTimestamp(data['timerExpiryTime']),
+      escalationTime: _parseTimestamp(data['escalationTime']),
+      timerStatus: _parseTaskTimerStatus(data['timerStatus']),
+      timerType: _parseTaskTimerType(data['timerType']),
+      lastAssignedTo: data['lastAssignedTo'] ?? '',
+      lastAssignedAt: _parseTimestamp(data['lastAssignedAt']),
       timerExtensions: _parseTimerExtensionsFromSnapshot(
-        snap['timerExtensions'],
+        data['timerExtensions'],
       ),
-      receiptId: snap['receiptId'] ?? '',
-      totalTimeSpent: snap['totalTimeSpent']?.toInt(),
+      receiptId: data['receiptId'] ?? '',
+      totalTimeSpent: data['totalTimeSpent']?.toInt(),
     );
   }
 

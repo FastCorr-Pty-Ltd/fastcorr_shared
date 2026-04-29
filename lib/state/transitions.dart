@@ -1,4 +1,5 @@
-import 'package:fastcorr_shared/models/request_model.dart' show Status;
+import 'package:fastcorr_shared/models/request_model.dart'
+    show ActionType, Status;
 import 'package:fastcorr_shared/state/actor_role.dart';
 import 'package:fastcorr_shared/state/request_flow.dart';
 import 'package:fastcorr_shared/state/stateful_request.dart';
@@ -343,6 +344,53 @@ const List<Transition> allowedTransitions = [
         'progress. Service layer still owns that guard.',
   ),
 
+  // --- Court appearance: no driver pickup; secretary (or admin) closes the
+  // request once the date is on the office appearance calendar.
+  Transition(
+    from: Status.assigned,
+    to: Status.completed,
+    flows: {RequestFlow.litigation},
+    actors: {
+      ActorRole.secretary,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+    },
+    timestampField: 'completedAt',
+    precondition: _isCourtAppearanceRequest,
+    preconditionDescription: 'request actionType must be courtAppearance',
+    notifies: {ActorRole.lawyer, ActorRole.officeAdmin},
+    policyNote:
+        'Counsel assignment and hearing outcome live on trials / case Court Dates.',
+  ),
+  Transition(
+    from: Status.inProgress,
+    to: Status.completed,
+    flows: {RequestFlow.litigation},
+    actors: {
+      ActorRole.secretary,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+    },
+    timestampField: 'completedAt',
+    precondition: _isCourtAppearanceRequest,
+    preconditionDescription: 'request actionType must be courtAppearance',
+    notifies: {ActorRole.lawyer, ActorRole.officeAdmin},
+  ),
+  Transition(
+    from: Status.readyForPickup,
+    to: Status.completed,
+    flows: {RequestFlow.litigation},
+    actors: {
+      ActorRole.secretary,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+    },
+    timestampField: 'completedAt',
+    precondition: _isCourtAppearanceRequest,
+    preconditionDescription: 'request actionType must be courtAppearance',
+    notifies: {ActorRole.lawyer, ActorRole.officeAdmin},
+  ),
+
   // =========================================================================
   // (7) ESCALATION (manual by office admin, auto by system)
   // =========================================================================
@@ -641,3 +689,6 @@ bool _hasDriver(StatefulRequest subject) {
   final id = subject.driverId;
   return id != null && id.isNotEmpty;
 }
+
+bool _isCourtAppearanceRequest(StatefulRequest subject) =>
+    subject.actionType == ActionType.courtAppearance;

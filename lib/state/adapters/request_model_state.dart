@@ -37,4 +37,7 @@ class RequestModelState implements StatefulRequest {
 
   @override
   String? get statusBeforeCancelPending => _request.statusBeforeCancelPending;
+
+  @override
+  ActionType? get actionType => _request.actionType;
 }

@@ -1,4 +1,5 @@
-import 'package:fastcorr_shared/models/request_model.dart' show Status;
+import 'package:fastcorr_shared/models/request_model.dart'
+    show ActionType, Status;
 import 'package:fastcorr_shared/state/state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -16,6 +17,10 @@ class _Subject implements StatefulRequest {
   final String? driverId;
   @override
   final String subjectId;
+  @override
+  final String? statusBeforeCancelPending;
+  @override
+  final ActionType? actionType;
 
   const _Subject({
     required this.currentStatus,
@@ -23,6 +28,8 @@ class _Subject implements StatefulRequest {
     this.assigneeId,
     this.driverId,
     this.subjectId = 'test-req',
+    this.statusBeforeCancelPending,
+    this.actionType,
   });
 
   _Subject copyWith({
@@ -30,22 +37,32 @@ class _Subject implements StatefulRequest {
     RequestFlow? flow,
     String? assigneeId,
     String? driverId,
+    ActionType? actionType,
   }) => _Subject(
     currentStatus: currentStatus ?? this.currentStatus,
     flow: flow ?? this.flow,
     assigneeId: assigneeId ?? this.assigneeId,
     driverId: driverId ?? this.driverId,
     subjectId: subjectId,
+    statusBeforeCancelPending: statusBeforeCancelPending,
+    actionType: actionType ?? this.actionType,
   );
 }
 
 // Convenience factories.
-_Subject lit(Status s, {String? assigneeId, String? driverId}) => _Subject(
-  currentStatus: s,
-  flow: RequestFlow.litigation,
-  assigneeId: assigneeId,
-  driverId: driverId,
-);
+_Subject lit(
+  Status s, {
+  String? assigneeId,
+  String? driverId,
+  ActionType? actionType,
+}) =>
+    _Subject(
+      currentStatus: s,
+      flow: RequestFlow.litigation,
+      assigneeId: assigneeId,
+      driverId: driverId,
+      actionType: actionType,
+    );
 _Subject msg(Status s, {String? driverId}) =>
     _Subject(currentStatus: s, flow: RequestFlow.messenger, driverId: driverId);
 
@@ -184,6 +201,42 @@ void main() {
       );
       expect(r, isA<TransitionAllowed>());
       expect((r as TransitionAllowed).transition.timestampField, 'completedAt');
+    });
+
+    test('assigned → completed blocked for non-courtAppearance (precondition)', () {
+      final r = RequestStateMachine.validateTransition(
+        subject: lit(Status.assigned, assigneeId: 'sec-1'),
+        to: Status.completed,
+        actor: ActorRole.secretary,
+      );
+      expect(r, isA<PreconditionFailed>());
+    });
+
+    test('assigned → completed by secretary when courtAppearance', () {
+      final r = RequestStateMachine.validateTransition(
+        subject: lit(
+          Status.assigned,
+          assigneeId: 'sec-1',
+          actionType: ActionType.courtAppearance,
+        ),
+        to: Status.completed,
+        actor: ActorRole.secretary,
+      );
+      expect(r, isA<TransitionAllowed>());
+      expect((r as TransitionAllowed).transition.timestampField, 'completedAt');
+    });
+
+    test('readyForPickup → completed by secretary when courtAppearance', () {
+      final r = RequestStateMachine.validateTransition(
+        subject: lit(
+          Status.readyForPickup,
+          assigneeId: 'sec-1',
+          actionType: ActionType.courtAppearance,
+        ),
+        to: Status.completed,
+        actor: ActorRole.secretary,
+      );
+      expect(r, isA<TransitionAllowed>());
     });
   });
 
@@ -447,12 +500,11 @@ void main() {
       expect(withReason, isA<TransitionAllowed>());
     });
 
-    test('pending → canceled does NOT require a reason', () {
-      // No work yet — cancellation is frictionless.
+    test('pending → canceled by office admin does NOT require a reason', () {
       final r = RequestStateMachine.validateTransition(
         subject: lit(Status.pending),
         to: Status.canceled,
-        actor: ActorRole.lawyer,
+        actor: ActorRole.officeAdmin,
       );
       expect(r, isA<TransitionAllowed>());
     });
@@ -473,20 +525,27 @@ void main() {
   // =========================================================================
 
   group('legalNextStates', () {
-    test('secretary on assigned litigation sees {inProgress, readyForPickup, rejected}', () {
+    test(
+      'secretary on assigned litigation sees {inProgress, readyForPickup, rejected, completed} (upper bound)',
+      () {
       final out = RequestStateMachine.legalNextStates(
         subject: lit(Status.assigned, assigneeId: 'sec-1'),
         actor: ActorRole.secretary,
       );
-      expect(out, {Status.inProgress, Status.readyForPickup, Status.rejected});
+      expect(out, {
+        Status.inProgress,
+        Status.readyForPickup,
+        Status.rejected,
+        Status.completed,
+      });
     });
 
-    test('lawyer on pending litigation sees {canceled}', () {
+    test('lawyer on pending litigation sees {cancelPending}', () {
       final out = RequestStateMachine.legalNextStates(
         subject: lit(Status.pending),
         actor: ActorRole.lawyer,
       );
-      expect(out, {Status.canceled});
+      expect(out, {Status.cancelPending});
     });
 
     test('lawyer on readyForPickup has NO options (admin-only cancel)', () {

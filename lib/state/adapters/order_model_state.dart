@@ -1,5 +1,6 @@
 import 'package:fastcorr_shared/models/order_model.dart';
-import 'package:fastcorr_shared/models/request_model.dart' show Status;
+import 'package:fastcorr_shared/models/request_model.dart'
+    show ActionType, Status;
 import 'package:fastcorr_shared/state/request_flow.dart';
 import 'package:fastcorr_shared/state/stateful_request.dart';
 
@@ -29,4 +30,7 @@ class OrderModelState implements StatefulRequest {
 
   @override
   String? get statusBeforeCancelPending => _order.statusBeforeCancelPending;
+
+  @override
+  ActionType? get actionType => null;
 }

@@ -1,4 +1,5 @@
-import 'package:fastcorr_shared/models/request_model.dart' show Status;
+import 'package:fastcorr_shared/models/request_model.dart'
+    show ActionType, Status;
 import 'package:fastcorr_shared/state/request_flow.dart';
 
 /// The minimum contract a request-like object must satisfy for the state
@@ -32,4 +33,8 @@ abstract class StatefulRequest {
   /// When [currentStatus] is [Status.cancelPending], the status name before the
   /// lawyer requested cancellation (used to validate reactivation edges).
   String? get statusBeforeCancelPending;
+
+  /// Litigation: [ActionType] for request-specific rules (e.g. court appearance
+  /// completion without a driver leg). Always null for messenger orders.
+  ActionType? get actionType;
 }
