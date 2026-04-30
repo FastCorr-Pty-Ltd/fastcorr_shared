@@ -74,10 +74,13 @@ extension AlertTypeX on ClientAlertType {
       case ClientAlertType.caseDocumentUploaded:
         return true;
 
-      // Trial (All)
-      case ClientAlertType.trialCreated:
+      // Trial — scheduled reminders use in-app / Cloud Function only for now.
       case ClientAlertType.trialReminder24h:
       case ClientAlertType.trialReminder1h:
+        return false;
+
+      // Other trial alerts (create/update/cancel) may still use email when wired.
+      case ClientAlertType.trialCreated:
       case ClientAlertType.trialUpdated:
       case ClientAlertType.trialCancelled:
         return true;
