@@ -4,6 +4,7 @@
 /// transition table (single source of truth for request lifecycle rules).
 library;
 
+export 'driver_task_status.dart';
 export 'actor_role.dart';
 export 'adapters/order_model_state.dart';
 export 'adapters/request_model_state.dart';
