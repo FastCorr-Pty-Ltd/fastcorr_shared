@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'unified_case_message.dart' show MessageStatus;
+
 enum MessageType { text, image, file }
 
 enum SenderRole { admin, support, client, driver, assignee, system }
@@ -12,6 +14,10 @@ class ChatMsgModel {
   final MessageType type;
   final DateTime createdAt;
   final bool isRead;
+  /// Firebase Auth uid (or staff userId) for the sender; null for legacy/system.
+  final String? senderId;
+  /// Delivery pipeline status for order chat (optional for legacy messages).
+  final MessageStatus status;
   final String? fileName;
   final int? fileSize;
   final String? fileUrl;
@@ -25,6 +31,8 @@ class ChatMsgModel {
     required this.type,
     required this.createdAt,
     this.isRead = false,
+    this.senderId,
+    this.status = MessageStatus.sent,
     this.fileName,
     this.fileSize,
     this.fileUrl,
@@ -72,7 +80,20 @@ class ChatMsgModel {
     }
   }
 
+  static MessageStatus _parseStatus(dynamic v) {
+    if (v is! String || v.isEmpty) return MessageStatus.sent;
+    try {
+      return MessageStatus.values.byName(v);
+    } catch (_) {
+      return MessageStatus.sent;
+    }
+  }
+
   factory ChatMsgModel.fromJson(Map<String, dynamic> json) {
+    var status = _parseStatus(json['status']);
+    if (json['status'] == null && json['isRead'] == true) {
+      status = MessageStatus.read;
+    }
     return ChatMsgModel(
       id: json['id'] ?? '',
       senderName: json['senderName'] ?? '',
@@ -81,6 +102,8 @@ class ChatMsgModel {
       type: _parseMessageType(json['type']),
       createdAt: _parseCreatedAt(json['createdAt']),
       isRead: json['isRead'] ?? false,
+      senderId: json['senderId'] as String?,
+      status: status,
       fileName: json['fileName'],
       fileSize: json['fileSize'],
       fileUrl: json['fileUrl'],
@@ -98,6 +121,8 @@ class ChatMsgModel {
       'type': type.name,
       'createdAt': createdAt.toIso8601String(),
       'isRead': isRead,
+      'status': status.name,
+      if (senderId != null && senderId!.isNotEmpty) 'senderId': senderId,
       'fileName': fileName,
       'fileSize': fileSize,
       'fileUrl': fileUrl,
@@ -113,6 +138,8 @@ class ChatMsgModel {
     MessageType? type,
     DateTime? createdAt,
     bool? isRead,
+    String? senderId,
+    MessageStatus? status,
     String? fileName,
     int? fileSize,
     String? fileUrl,
@@ -126,6 +153,8 @@ class ChatMsgModel {
       type: type ?? this.type,
       createdAt: createdAt ?? this.createdAt,
       isRead: isRead ?? this.isRead,
+      senderId: senderId ?? this.senderId,
+      status: status ?? this.status,
       fileName: fileName ?? this.fileName,
       fileSize: fileSize ?? this.fileSize,
       fileUrl: fileUrl ?? this.fileUrl,

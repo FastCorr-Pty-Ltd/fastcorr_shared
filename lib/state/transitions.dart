@@ -302,7 +302,7 @@ const List<Transition> allowedTransitions = [
   Transition(
     from: Status.accepted,
     to: Status.arrivedAtPickup,
-    flows: {RequestFlow.messenger},
+    flows: {RequestFlow.messenger, RequestFlow.litigation},
     actors: {ActorRole.driver},
     timestampField: 'arrivedAtPickupAt',
     precondition: _hasDriver,
@@ -313,7 +313,7 @@ const List<Transition> allowedTransitions = [
   Transition(
     from: Status.arrivedAtPickup,
     to: Status.pickedup,
-    flows: {RequestFlow.messenger},
+    flows: {RequestFlow.messenger, RequestFlow.litigation},
     actors: {ActorRole.driver},
     timestampField: 'pickedupAt',
     precondition: _hasDriver,

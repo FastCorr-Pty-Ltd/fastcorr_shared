@@ -215,7 +215,7 @@ abstract class TrackedMapViewModelBase extends BaseViewModel {
   /// Per-app: resolve the current user as a (name, role) pair. Return
   /// null if no user is signed in / can be loaded.
   @protected
-  Future<({String name, SenderRole role})?> resolveSender();
+  Future<({String name, SenderRole role, String senderId})?> resolveSender();
 
   /// Per-app: persist the outgoing message via the app's ChatService.
   @protected
@@ -241,6 +241,7 @@ abstract class TrackedMapViewModelBase extends BaseViewModel {
           content: trimmed,
           type: MessageType.text,
           createdAt: DateTime.now(),
+          senderId: ident.senderId,
         ),
       );
     } catch (e) {
