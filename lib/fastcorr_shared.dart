@@ -54,6 +54,9 @@ export 'ui/document/document_view.dart';
 export 'ui/document/document_viewmodel.dart';
 export 'ui/document/document_view_helper.dart';
 
+// Proof of Delivery PDF (shared user + admin layout)
+export 'pdf/proof_of_delivery_pdf.dart';
+
 // Export court dates functionality
 export 'ui/court_dates/court_dates_viewmodel.dart';
 

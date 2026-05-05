@@ -57,11 +57,7 @@ const List<Transition> allowedTransitions = [
     from: Status.pending,
     to: Status.assigned,
     flows: {RequestFlow.litigation},
-    actors: {
-      ActorRole.officeAdmin,
-      ActorRole.superAdmin,
-      ActorRole.secretary,
-    },
+    actors: {ActorRole.officeAdmin, ActorRole.superAdmin, ActorRole.secretary},
     timestampField: 'assignedAt',
     notifies: {ActorRole.lawyer, ActorRole.secretary},
   ),
@@ -100,7 +96,6 @@ const List<Transition> allowedTransitions = [
   // =========================================================================
   // (2) LITIGATION WORK PROGRESSION
   // =========================================================================
-
   Transition(
     from: Status.assigned,
     to: Status.inProgress,
@@ -223,16 +218,11 @@ const List<Transition> allowedTransitions = [
   // =========================================================================
   // (4b) `cancelPending` — lawyer reactivation or admin final cancel
   // =========================================================================
-
   Transition(
     from: Status.cancelPending,
     to: Status.pending,
     flows: {RequestFlow.litigation, RequestFlow.messenger},
-    actors: {
-      ActorRole.lawyer,
-      ActorRole.officeAdmin,
-      ActorRole.superAdmin,
-    },
+    actors: {ActorRole.lawyer, ActorRole.officeAdmin, ActorRole.superAdmin},
     precondition: _restoreToPending,
     preconditionDescription:
         'reactivation only restores the status stored before cancelPending',
@@ -243,11 +233,7 @@ const List<Transition> allowedTransitions = [
     from: Status.cancelPending,
     to: Status.assigned,
     flows: {RequestFlow.litigation},
-    actors: {
-      ActorRole.lawyer,
-      ActorRole.officeAdmin,
-      ActorRole.superAdmin,
-    },
+    actors: {ActorRole.lawyer, ActorRole.officeAdmin, ActorRole.superAdmin},
     precondition: _restoreToAssigned,
     preconditionDescription:
         'reactivation only restores the status stored before cancelPending',
@@ -258,11 +244,7 @@ const List<Transition> allowedTransitions = [
     from: Status.cancelPending,
     to: Status.inProgress,
     flows: {RequestFlow.litigation},
-    actors: {
-      ActorRole.lawyer,
-      ActorRole.officeAdmin,
-      ActorRole.superAdmin,
-    },
+    actors: {ActorRole.lawyer, ActorRole.officeAdmin, ActorRole.superAdmin},
     precondition: _restoreToInProgress,
     preconditionDescription:
         'reactivation only restores the status stored before cancelPending',
@@ -273,11 +255,7 @@ const List<Transition> allowedTransitions = [
     from: Status.cancelPending,
     to: Status.canceled,
     flows: {RequestFlow.litigation, RequestFlow.messenger},
-    actors: {
-      ActorRole.officeAdmin,
-      ActorRole.superAdmin,
-      ActorRole.system,
-    },
+    actors: {ActorRole.officeAdmin, ActorRole.superAdmin, ActorRole.system},
     timestampField: 'canceledAt',
     notifies: {ActorRole.lawyer, ActorRole.secretary, ActorRole.driver},
   ),
@@ -324,7 +302,6 @@ const List<Transition> allowedTransitions = [
   // =========================================================================
   // (6) COMPLETION
   // =========================================================================
-
   Transition(
     from: Status.pickedup,
     to: Status.completed,
@@ -333,11 +310,7 @@ const List<Transition> allowedTransitions = [
     timestampField: 'completedAt',
     precondition: _hasDriver,
     preconditionDescription: 'a driver must own the pickup to complete it',
-    notifies: {
-      ActorRole.lawyer,
-      ActorRole.secretary,
-      ActorRole.officeAdmin,
-    },
+    notifies: {ActorRole.lawyer, ActorRole.secretary, ActorRole.officeAdmin},
     policyNote:
         'Multi-stop dropoff completion (all-dropoffs-delivered) is NOT '
         'enforced here because StatefulRequest does not carry dropoff '
@@ -350,11 +323,7 @@ const List<Transition> allowedTransitions = [
     from: Status.assigned,
     to: Status.completed,
     flows: {RequestFlow.litigation},
-    actors: {
-      ActorRole.secretary,
-      ActorRole.officeAdmin,
-      ActorRole.superAdmin,
-    },
+    actors: {ActorRole.secretary, ActorRole.officeAdmin, ActorRole.superAdmin},
     timestampField: 'completedAt',
     precondition: _isCourtAppearanceRequest,
     preconditionDescription: 'request actionType must be courtAppearance',
@@ -366,11 +335,7 @@ const List<Transition> allowedTransitions = [
     from: Status.inProgress,
     to: Status.completed,
     flows: {RequestFlow.litigation},
-    actors: {
-      ActorRole.secretary,
-      ActorRole.officeAdmin,
-      ActorRole.superAdmin,
-    },
+    actors: {ActorRole.secretary, ActorRole.officeAdmin, ActorRole.superAdmin},
     timestampField: 'completedAt',
     precondition: _isCourtAppearanceRequest,
     preconditionDescription: 'request actionType must be courtAppearance',
@@ -380,11 +345,7 @@ const List<Transition> allowedTransitions = [
     from: Status.readyForPickup,
     to: Status.completed,
     flows: {RequestFlow.litigation},
-    actors: {
-      ActorRole.secretary,
-      ActorRole.officeAdmin,
-      ActorRole.superAdmin,
-    },
+    actors: {ActorRole.secretary, ActorRole.officeAdmin, ActorRole.superAdmin},
     timestampField: 'completedAt',
     precondition: _isCourtAppearanceRequest,
     preconditionDescription: 'request actionType must be courtAppearance',

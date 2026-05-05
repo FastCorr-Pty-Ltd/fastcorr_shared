@@ -273,6 +273,15 @@ void main() {
       expect(r, isA<TransitionAllowed>());
     });
 
+    test('arrivedAtPickup → pickedup by driver (litigation CLTGN path)', () {
+      final r = RequestStateMachine.validateTransition(
+        subject: lit(Status.arrivedAtPickup, driverId: 'drv-1'),
+        to: Status.pickedup,
+        actor: ActorRole.driver,
+      );
+      expect(r, isA<TransitionAllowed>());
+    });
+
     test('pickedup → completed by driver', () {
       final r = RequestStateMachine.validateTransition(
         subject: msg(Status.pickedup, driverId: 'drv-1'),
