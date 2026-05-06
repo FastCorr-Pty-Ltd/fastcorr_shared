@@ -18,7 +18,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 ///
 /// View / viewmodel layers should depend only on this type — they never
 /// need to know whether the order originates from `litigation_requests` or
-/// `delivery_orders`, or how the polyline was calculated.
+/// the messenger `dispatch` mirror (vs canonical `delivery_orders`), or how
+/// the polyline was calculated.
 class TrackedMapState {
   /// Lifecycle phase. `initial` is emitted exactly once before any data has
   /// arrived (lets callers render skeletons without inspecting nullable

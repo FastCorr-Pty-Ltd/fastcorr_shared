@@ -16,7 +16,9 @@ import 'package:fastcorr_shared/models/models.dart';
 /// Routing rules:
 ///
 /// * IDs prefixed `CLTGN` → `litigation_requests` collection (`RequestModel`).
-/// * IDs prefixed `ODR`   → `delivery_orders` collection (`OrderModel`).
+/// * IDs prefixed `ODR`   → `dispatch` collection (mirror of `delivery_orders`;
+///   same [OrderModel] JSON, readable by any authenticated user for map/coordination
+///   UIs while `delivery_orders` doc reads remain tighter).
 ///
 /// Pickup resolution:
 ///
@@ -40,7 +42,10 @@ class TrackedOrderRepository {
 
   // Collection paths kept in one place so they're easy to grep / change.
   static const String _litigationCollection = 'litigation_requests';
-  static const String _deliveryCollection = 'delivery_orders';
+  /// Messenger orders: read the dispatch mirror (kept in sync with `delivery_orders`
+  /// by the user app and admin task flows) so map tracking works for office staff
+  /// under Firestore rules.
+  static const String _dispatchCollection = 'dispatch';
   static const String _orgsCollection = 'organisations';
   static const String _contactsSubcollection = 'contacts';
   static const String _officesCollection = 'offices';
@@ -132,7 +137,7 @@ class TrackedOrderRepository {
   Stream<TrackedOrder> _streamDelivery(String orderId) {
     final cache = _LookupCache();
     return _firestore
-        .collection(_deliveryCollection)
+        .collection(_dispatchCollection)
         .doc(orderId)
         .snapshots()
         .where((s) => s.exists)
