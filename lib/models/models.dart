@@ -7,6 +7,7 @@ export 'court_model.dart';
 export 'contact_model.dart';
 export 'address_model.dart';
 export 'request_model.dart';
+export 'request_routing_status.dart';
 export 'timer_extension.dart';
 export 'org_model.dart';
 export 'chat_msg_model.dart';

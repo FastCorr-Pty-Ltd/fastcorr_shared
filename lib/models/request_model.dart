@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/models/models.dart';
+import 'package:fastcorr_shared/models/request_routing_status.dart';
 import 'package:flutter/material.dart';
 
 enum Priority { urgent, standard }
@@ -163,6 +164,12 @@ class RequestModel {
   final DateTime? lastAssignedAt; // When last reassigned
   final List<TimerExtension>? timerExtensions; // Track manual extensions
 
+  /// Request routing audit (case-centric assignment pipeline).
+  final RequestRoutingStatus? routingStatus;
+  final String? routingReason;
+  final DateTime? routedAt;
+  final String? routedBy;
+
   RequestModel({
     required this.orderId,
     required this.title,
@@ -211,6 +218,10 @@ class RequestModel {
     this.timerExtensions,
     this.receiptId,
     this.totalTimeSpent,
+    this.routingStatus,
+    this.routingReason,
+    this.routedAt,
+    this.routedBy,
   });
 
   factory RequestModel.fromJson(Map<String, dynamic> json) {
@@ -275,6 +286,10 @@ class RequestModel {
 
       receiptId: json['receiptId']?.toString() ?? '',
       totalTimeSpent: json['totalTimeSpent']?.toInt(),
+      routingStatus: RequestRoutingStatusX.parse(json['routingStatus']),
+      routingReason: json['routingReason']?.toString(),
+      routedAt: _parseDateTime(json['routedAt']),
+      routedBy: json['routedBy']?.toString(),
     );
   }
 
@@ -342,6 +357,10 @@ class RequestModel {
       ),
       receiptId: data['receiptId'] ?? '',
       totalTimeSpent: data['totalTimeSpent']?.toInt(),
+      routingStatus: RequestRoutingStatusX.parse(data['routingStatus']),
+      routingReason: data['routingReason']?.toString(),
+      routedAt: _parseTimestamp(data['routedAt']),
+      routedBy: data['routedBy']?.toString(),
     );
   }
 
@@ -420,6 +439,10 @@ class RequestModel {
           : null,
       'timerExtensions': timerExtensions?.map((e) => e.toJson()).toList(),
       'totalTimeSpent': totalTimeSpent,
+      if (routingStatus != null) 'routingStatus': routingStatus!.firestoreValue,
+      if (routingReason != null) 'routingReason': routingReason,
+      if (routedAt != null) 'routedAt': Timestamp.fromDate(routedAt!),
+      if (routedBy != null) 'routedBy': routedBy,
     };
   }
 
@@ -471,6 +494,10 @@ class RequestModel {
     String? receiptId,
     int? phase,
     int? totalTimeSpent,
+    RequestRoutingStatus? routingStatus,
+    String? routingReason,
+    DateTime? routedAt,
+    String? routedBy,
   }) {
     return RequestModel(
       orderId: orderId ?? this.orderId,
@@ -521,6 +548,10 @@ class RequestModel {
       receiptId: receiptId ?? this.receiptId,
       phase: phase ?? this.phase,
       totalTimeSpent: totalTimeSpent ?? this.totalTimeSpent,
+      routingStatus: routingStatus ?? this.routingStatus,
+      routingReason: routingReason ?? this.routingReason,
+      routedAt: routedAt ?? this.routedAt,
+      routedBy: routedBy ?? this.routedBy,
     );
   }
 
