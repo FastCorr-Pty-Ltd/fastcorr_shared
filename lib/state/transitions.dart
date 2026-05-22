@@ -93,6 +93,21 @@ const List<Transition> allowedTransitions = [
     notifies: {ActorRole.lawyer, ActorRole.officeAdmin},
   ),
 
+  // --- Litigation: secretary (or office admin) releases to drivers even when
+  // routing left the request on `pending` (recovery / break-glass dispatch).
+  Transition(
+    from: Status.pending,
+    to: Status.readyForPickup,
+    flows: {RequestFlow.litigation},
+    actors: {ActorRole.secretary, ActorRole.officeAdmin, ActorRole.superAdmin},
+    timestampField: 'readyForPickupAt',
+    notifies: {ActorRole.lawyer, ActorRole.deliveryCoordinator},
+    policyNote:
+        'Skips the assigned/inProgress office-prep stages when status was '
+        'stuck on pending; TaskService may heal assigneeId/routing in the '
+        'same write.',
+  ),
+
   // =========================================================================
   // (2) LITIGATION WORK PROGRESSION
   // =========================================================================

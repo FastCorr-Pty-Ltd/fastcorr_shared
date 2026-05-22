@@ -183,6 +183,19 @@ void main() {
       expect(r, isA<TransitionAllowed>());
     });
 
+    test('pending → readyForPickup by secretary (routing recovery)', () {
+      final r = RequestStateMachine.validateTransition(
+        subject: lit(Status.pending, assigneeId: 'sec-1'),
+        to: Status.readyForPickup,
+        actor: ActorRole.secretary,
+      );
+      expect(r, isA<TransitionAllowed>());
+      expect(
+        (r as TransitionAllowed).transition.timestampField,
+        'readyForPickupAt',
+      );
+    });
+
     test('readyForPickup → pickedup by driver stamps pickedupAt', () {
       final r = RequestStateMachine.validateTransition(
         subject: lit(Status.readyForPickup, driverId: 'drv-1'),

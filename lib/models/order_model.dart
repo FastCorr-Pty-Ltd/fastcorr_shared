@@ -116,7 +116,7 @@ class OrderModel {
               .map((e) => AddressModel.fromJson(e))
               .toList(),
     pickupLocation: processedGeoPoint(json['pickupLocation']),
-    instructions: json['instructions'] ?? '',
+    instructions: _parseInstructions(json['instructions']),
     driverId: json['driverId'] ?? '',
     assigneeId: json['assigneeId'] ?? '',
     readyForPickupAt: _parseTimestamp(json['readyForPickupAt']),
@@ -288,5 +288,13 @@ class OrderModel {
       }
     }
     return Status.pending;
+  }
+
+  /// Messenger orders store plain text; litigation stores a file list.
+  static String _parseInstructions(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    if (value is List) return '';
+    return value.toString();
   }
 }

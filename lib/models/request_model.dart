@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/models/models.dart';
 import 'package:fastcorr_shared/models/request_routing_status.dart';
+import 'package:fastcorr_shared/utils/utils.dart';
 import 'package:flutter/material.dart';
 
 enum Priority { urgent, standard }
@@ -793,7 +794,11 @@ class RequestModel {
       return DateTime.parse(value);
     } else if (value is DateTime) {
       return value;
-    } else {
+    }
+
+    try {
+      return processedTimestamp(value)?.toDate();
+    } catch (_) {
       return null;
     }
   }

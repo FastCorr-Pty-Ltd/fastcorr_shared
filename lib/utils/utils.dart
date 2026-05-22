@@ -25,6 +25,21 @@ Timestamp? processedTimestamp(dynamic rawValue) {
     return Timestamp.fromDate(DateTime.parse(rawValue));
   }
 
+  /// Callable / CF writes may store Timestamp as a plain map
+  /// ({_seconds, _nanoseconds} or {seconds, nanoseconds}).
+  if (rawValue is Map) {
+    final m = Map<String, dynamic>.from(rawValue);
+    final seconds = m['_seconds'] ?? m['seconds'];
+    final nanoseconds = m['_nanoseconds'] ?? m['nanoseconds'] ?? 0;
+    if (seconds != null) {
+      final s = seconds is int ? seconds : int.tryParse(seconds.toString());
+      final n = nanoseconds is int
+          ? nanoseconds
+          : int.tryParse(nanoseconds.toString()) ?? 0;
+      if (s != null) return Timestamp(s, n);
+    }
+  }
+
   /// Handle Firestore Web timestamps (JavaScript objects)
   /// These come as objects with seconds and nanoseconds properties
   try {
@@ -99,4 +114,54 @@ List<String> safeListToJson(List<String>? list) {
       .where((item) => item.isNotEmpty)
       .map((item) => item.toString())
       .toList();
+}
+
+/// Recursively converts a map/list tree to types allowed by
+/// [HttpsCallable.call] (null, String, num, bool, List, Map).
+///
+/// Firestore [Timestamp] / [GeoPoint] and [DateTime] are encoded for
+/// `reviveFirestoreValues` in Cloud Functions.
+dynamic encodeForHttpsCallable(dynamic value) {
+  if (value == null) return null;
+
+  if (value is Timestamp) {
+    return {
+      '_seconds': value.seconds,
+      '_nanoseconds': value.nanoseconds,
+    };
+  }
+
+  if (value is GeoPoint) {
+    return {
+      '_latitude': value.latitude,
+      '_longitude': value.longitude,
+    };
+  }
+
+  if (value is DateTime) {
+    return value.toIso8601String();
+  }
+
+  if (value is Enum) {
+    return value.name;
+  }
+
+  if (value is bool || value is String || value is num) {
+    return value;
+  }
+
+  if (value is Map) {
+    return value.map(
+      (key, nested) => MapEntry(
+        key.toString(),
+        encodeForHttpsCallable(nested),
+      ),
+    );
+  }
+
+  if (value is List) {
+    return value.map(encodeForHttpsCallable).toList();
+  }
+
+  return value.toString();
 }
