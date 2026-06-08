@@ -5,6 +5,7 @@ export 'trial_model.dart';
 export 'case_model.dart';
 export 'court_model.dart';
 export 'contact_model.dart';
+export 'org_client_model.dart';
 export 'address_model.dart';
 export 'request_model.dart';
 export 'request_routing_status.dart';
