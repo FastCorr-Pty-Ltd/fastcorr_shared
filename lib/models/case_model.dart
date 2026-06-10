@@ -3,6 +3,25 @@ import 'package:fastcorr_shared/utils/utils.dart';
 
 enum CaseStatus { active, closed, pending, onHold }
 
+/// Billing matter types selectable when creating a case file.
+const List<String> kMatterTypes = [
+  '30-Day Terms',
+  '60-Day Terms',
+  'Bad Debt',
+  'Business Rescue',
+  'Client Suspended',
+  'Collection',
+  'Contingency',
+  'Correspondent',
+  'Late Estate',
+  'Payment Arrangement',
+  'Pro-Bono',
+  'Retainers',
+  'Secretary Pool',
+  'SEESA - 10% Discount',
+  'Signed AOD',
+];
+
 class CaseModel {
   final String caseFileId;
   final String litNumber;
@@ -17,6 +36,18 @@ class CaseModel {
   final String orgId;
   final String officeId;
   final List<String>? partyIds;
+
+  // Billing & access (accounting module)
+  /// Org-unique client number, e.g. `CNT001`. The client number is the
+  /// unique identifier for clients (also the Firestore document id under
+  /// `organisations/{orgId}/clients`).
+  final String? clientNumber;
+  /// Billing matter type, one of [kMatterTypes].
+  final String? matterType;
+  /// Optional maximum fees that may be billed on this matter (cents).
+  final int? feeCapCents;
+  /// Other lawyers in the organisation granted access to this case file.
+  final List<String> accessLawyerIds;
 
   final CaseStatus status;
   final String? judge;
@@ -37,6 +68,8 @@ class CaseModel {
   // Event tracking
   final List<String> courtDateIds;
   final List<String> requestIds;
+  /// Client invoice numbers issued against this case file (one per billed action).
+  final List<String> invoiceIds;
   final List<String> returnTaskIds;
   final List<String>? receiptIds;
   final List<String>? instructionIds;
@@ -61,11 +94,16 @@ class CaseModel {
     this.paidAmount = 0,
     this.courtDateIds = const [],
     this.requestIds = const [],
+    this.invoiceIds = const [],
     this.returnTaskIds = const [],
     this.instructionIds,
     this.followupDocIds,
     this.receiptIds,
     required this.orgId,
+    this.clientNumber,
+    this.matterType,
+    this.feeCapCents,
+    this.accessLawyerIds = const [],
     this.assigneeId,
     required this.officeId,
     this.correspondentId,
@@ -138,11 +176,17 @@ class CaseModel {
       scale: json['scale'] ?? '',
       courtDateIds: safeListFromJson(json['courtDateIds']),
       requestIds: safeListFromJson(json['requestIds']),
+      invoiceIds: safeListFromJson(json['invoiceIds']),
       receiptIds: safeListFromJson(json['receiptIds']),
       returnTaskIds: safeListFromJson(json['returnTaskIds']),
       instructionIds: safeListFromJson(json['instructionIds']),
       followupDocIds: safeListFromJson(json['followupDocIds']),
       orgId: json['orgId'] ?? '',
+      clientNumber: json['clientNumber'] as String?,
+      matterType: json['matterType'] as String?,
+      feeCapCents:
+          json['feeCapCents'] == null ? null : safeToInt(json['feeCapCents']),
+      accessLawyerIds: safeListFromJson(json['accessLawyerIds']),
       assigneeId: json['assigneeId'] ?? '',
       officeId: json['officeId'] ?? '',
       correspondentId: json['correspondentId'] ?? '',
@@ -195,6 +239,10 @@ class CaseModel {
       return defaultValue;
     }
 
+    // New billing fields may be absent on older documents; the snapshot []
+    // operator throws on missing fields, so go through the raw data map.
+    final data = snapshot.data() as Map<String, dynamic>? ?? {};
+
     return CaseModel(
       caseFileId: snapshot.id,
       caseNumber: snapshot['caseNumber'] ?? '',
@@ -216,11 +264,17 @@ class CaseModel {
       scale: snapshot['scale'] ?? '',
       courtDateIds: safeListFromSnapshot(snapshot['courtDateIds']),
       requestIds: safeListFromSnapshot(snapshot['requestIds']),
+      invoiceIds: safeListFromSnapshot(data['invoiceIds']),
       receiptIds: safeListFromSnapshot(snapshot['receiptIds']),
       returnTaskIds: safeListFromSnapshot(snapshot['returnTaskIds']),
       instructionIds: safeListFromSnapshot(snapshot['instructionIds']),
       followupDocIds: safeListFromSnapshot(snapshot['followupDocIds']),
       orgId: snapshot['orgId'] ?? '',
+      clientNumber: data['clientNumber'] as String?,
+      matterType: data['matterType'] as String?,
+      feeCapCents:
+          data['feeCapCents'] == null ? null : safeToInt(data['feeCapCents']),
+      accessLawyerIds: safeListFromSnapshot(data['accessLawyerIds']),
       assigneeId: snapshot['assigneeId'] ?? '',
       officeId: snapshot['officeId'] ?? '',
       correspondentId: snapshot['correspondentId'] ?? '',
@@ -263,8 +317,13 @@ class CaseModel {
       'followupDocIds': safeListToJson(followupDocIds),
       'courtDateIds': safeListToJson(courtDateIds),
       'requestIds': safeListToJson(requestIds),
+      'invoiceIds': safeListToJson(invoiceIds),
       'receiptIds': safeListToJson(receiptIds),
       'orgId': orgId,
+      'clientNumber': clientNumber,
+      'matterType': matterType,
+      'feeCapCents': feeCapCents,
+      'accessLawyerIds': safeListToJson(accessLawyerIds),
       'assigneeId': assigneeId,
       'officeId': officeId,
       'correspondentId': correspondentId,
@@ -295,11 +354,16 @@ class CaseModel {
     List<String>? eventIds,
     List<String>? courtDateIds,
     List<String>? requestIds,
+    List<String>? invoiceIds,
     List<String>? receiptIds,
     List<String>? returnTaskIds,
     List<String>? instructionIds,
     List<String>? followupDocIds,
     String? orgId,
+    String? clientNumber,
+    String? matterType,
+    int? feeCapCents,
+    List<String>? accessLawyerIds,
     String? assigneeId,
     String? officeId,
     String? judge,
@@ -331,8 +395,13 @@ class CaseModel {
       paidAmount: paidAmount ?? this.paidAmount,
       courtDateIds: courtDateIds ?? this.courtDateIds,
       requestIds: requestIds ?? this.requestIds,
+      invoiceIds: invoiceIds ?? this.invoiceIds,
       receiptIds: receiptIds ?? this.receiptIds,
       orgId: orgId ?? this.orgId,
+      clientNumber: clientNumber ?? this.clientNumber,
+      matterType: matterType ?? this.matterType,
+      feeCapCents: feeCapCents ?? this.feeCapCents,
+      accessLawyerIds: accessLawyerIds ?? this.accessLawyerIds,
       assigneeId: assigneeId ?? this.assigneeId,
       officeId: officeId ?? this.officeId,
       correspondentId: correspondentId ?? this.correspondentId,

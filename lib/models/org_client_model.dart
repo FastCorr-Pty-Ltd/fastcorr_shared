@@ -2,12 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fastcorr_shared/utils/utils.dart';
 
 /// Billing client of a law firm (organisation), stored under
-/// `organisations/{orgId}/clients/{clientId}`.
+/// `organisations/{orgId}/clients/{clientNumber}`.
 enum OrgClientType { individual, company }
 
 class OrgClientModel {
-  final String clientId;
-  /// Display number unique per org, e.g. `0001`, `0002`.
+  /// Org-unique client number, e.g. `CNT001`. This IS the unique identifier
+  /// for the client everywhere: UI, models, and the Firestore document id.
   final String clientNumber;
   final int clientNumberSeq;
   final String name;
@@ -30,7 +30,6 @@ class OrgClientModel {
   final Timestamp? updatedAt;
 
   OrgClientModel({
-    required this.clientId,
     required this.clientNumber,
     required this.clientNumberSeq,
     required this.name,
@@ -53,6 +52,11 @@ class OrgClientModel {
   int get balanceCents => totalBilledCents - totalPaidCents;
   int get caseCount => caseFileIds.length;
 
+  /// Whether [value] looks like an org client number (`CNT001`, …).
+  static bool isClientNumberFormat(String value) {
+    return RegExp(r'^CNT\d+$').hasMatch(value.trim());
+  }
+
   factory OrgClientModel.fromJson(Map<String, dynamic> json) {
     List<String> safeIds(dynamic raw) {
       if (raw == null || raw is! List) return [];
@@ -67,7 +71,6 @@ class OrgClientModel {
     }
 
     return OrgClientModel(
-      clientId: json['clientId'] as String? ?? '',
       clientNumber: json['clientNumber'] as String? ?? '',
       clientNumberSeq: safeInt(json['clientNumberSeq'], fallback: 0),
       name: json['name'] as String? ?? '',
@@ -94,15 +97,26 @@ class OrgClientModel {
 
   factory OrgClientModel.fromSnapshot(DocumentSnapshot snap) {
     final data = snap.data() as Map<String, dynamic>? ?? {};
+    final stored = (data['clientNumber'] as String?)?.trim() ?? '';
+
+    // Prefer the CNT number stored on the document. Legacy clients were created
+    // with a UUID document id but still have clientNumber: CNT001 in the body.
+    final clientNumber = isClientNumberFormat(stored)
+        ? stored
+        : isClientNumberFormat(snap.id)
+            ? snap.id
+            : stored.isNotEmpty
+                ? stored
+                : snap.id;
+
     return OrgClientModel.fromJson({
       ...data,
-      'clientId': snap.id,
+      'clientNumber': clientNumber,
     });
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'clientId': clientId,
       'clientNumber': clientNumber,
       'clientNumberSeq': clientNumberSeq,
       'name': name,
@@ -124,7 +138,6 @@ class OrgClientModel {
   }
 
   OrgClientModel copyWith({
-    String? clientId,
     String? clientNumber,
     int? clientNumberSeq,
     String? name,
@@ -144,7 +157,6 @@ class OrgClientModel {
     Timestamp? updatedAt,
   }) {
     return OrgClientModel(
-      clientId: clientId ?? this.clientId,
       clientNumber: clientNumber ?? this.clientNumber,
       clientNumberSeq: clientNumberSeq ?? this.clientNumberSeq,
       name: name ?? this.name,
