@@ -1,37 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fastcorr_shared/models/fee_entry_model.dart';
 import 'package:fastcorr_shared/utils/utils.dart';
 
-/// How a professional fee was captured.
-enum FeeEntryKind {
-  /// Billed by time: [units] × [rateCents].
-  time,
-
-  /// Single fixed / unitary amount.
-  fixedFee,
-}
-
-/// Lifecycle of a captured fee line (WIP until invoiced).
-enum FeeEntryStatus { wip, invoiced }
-
-/// Unbilled professional fee linked to a case file via LitNumber.
-/// Stored under `organisations/{orgId}/fee_entries/{entryId}`.
-class FeeEntryModel {
-  const FeeEntryModel({
+/// Manually captured recoverable cost (court fee, sheriff, etc.) linked to a
+/// case file. Stored under `organisations/{orgId}/disbursement_entries`.
+///
+/// FastCorr litigation disbursements are auto-invoiced per request; this
+/// model covers everything else the firm bills on to the client.
+class DisbursementEntryModel {
+  const DisbursementEntryModel({
     required this.entryId,
     required this.orgId,
     required this.caseFileId,
     required this.litNumber,
     required this.caseName,
     this.clientNumber,
-    required this.feeEarnerId,
-    required this.feeEarnerName,
-    required this.createdBy,
+    required this.recordedById,
+    required this.recordedByName,
     required this.description,
-    required this.kind,
     required this.amountCents,
-    this.units,
-    this.rateCents,
-    required this.activityDate,
+    required this.expenseDate,
+    this.vendorReference,
     this.status = FeeEntryStatus.wip,
     this.invoicedInvoiceNumber,
     required this.createdAt,
@@ -44,48 +33,37 @@ class FeeEntryModel {
   final String caseName;
   final String? clientNumber;
 
-  /// Lawyer who performed the work (usually the logged-in user).
-  final String feeEarnerId;
-  final String feeEarnerName;
-  final String createdBy;
+  final String recordedById;
+  final String recordedByName;
 
   final String description;
-  final FeeEntryKind kind;
   final int amountCents;
 
-  /// Hours (or units) when [kind] is [FeeEntryKind.time].
-  final double? units;
+  /// When the expense was incurred.
+  final Timestamp expenseDate;
 
-  /// Rate per unit in cents when [kind] is [FeeEntryKind.time].
-  final int? rateCents;
+  /// Optional receipt / reference from the vendor.
+  final String? vendorReference;
 
-  final Timestamp activityDate;
   final FeeEntryStatus status;
   final String? invoicedInvoiceNumber;
   final Timestamp createdAt;
 
-  factory FeeEntryModel.fromJson(Map<String, dynamic> json) {
-    return FeeEntryModel(
+  factory DisbursementEntryModel.fromJson(Map<String, dynamic> json) {
+    return DisbursementEntryModel(
       entryId: json['entryId'] as String? ?? '',
       orgId: json['orgId'] as String? ?? '',
       caseFileId: json['caseFileId'] as String? ?? '',
       litNumber: json['litNumber'] as String? ?? '',
       caseName: json['caseName'] as String? ?? '',
       clientNumber: json['clientNumber'] as String?,
-      feeEarnerId: json['feeEarnerId'] as String? ?? '',
-      feeEarnerName: json['feeEarnerName'] as String? ?? '',
-      createdBy: json['createdBy'] as String? ?? '',
+      recordedById: json['recordedById'] as String? ?? '',
+      recordedByName: json['recordedByName'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      kind: FeeEntryKind.values.byName(
-        json['kind'] as String? ?? 'fixedFee',
-      ),
       amountCents: (json['amountCents'] as num?)?.toInt() ?? 0,
-      units: json['units'] == null ? null : (json['units'] as num).toDouble(),
-      rateCents: json['rateCents'] == null
-          ? null
-          : (json['rateCents'] as num).toInt(),
-      activityDate:
-          processedTimestamp(json['activityDate']) ?? Timestamp.now(),
+      expenseDate:
+          processedTimestamp(json['expenseDate']) ?? Timestamp.now(),
+      vendorReference: json['vendorReference'] as String?,
       status: FeeEntryStatus.values.byName(
         json['status'] as String? ?? 'wip',
       ),
@@ -94,9 +72,9 @@ class FeeEntryModel {
     );
   }
 
-  factory FeeEntryModel.fromSnapshot(DocumentSnapshot snap) {
+  factory DisbursementEntryModel.fromSnapshot(DocumentSnapshot snap) {
     final data = snap.data() as Map<String, dynamic>? ?? {};
-    return FeeEntryModel.fromJson({
+    return DisbursementEntryModel.fromJson({
       ...data,
       'entryId': snap.id,
     });
@@ -110,15 +88,12 @@ class FeeEntryModel {
       'litNumber': litNumber,
       'caseName': caseName,
       'clientNumber': clientNumber,
-      'feeEarnerId': feeEarnerId,
-      'feeEarnerName': feeEarnerName,
-      'createdBy': createdBy,
+      'recordedById': recordedById,
+      'recordedByName': recordedByName,
       'description': description,
-      'kind': kind.name,
       'amountCents': amountCents,
-      'units': units,
-      'rateCents': rateCents,
-      'activityDate': activityDate,
+      'expenseDate': expenseDate,
+      'vendorReference': vendorReference,
       'status': status.name,
       'invoicedInvoiceNumber': invoicedInvoiceNumber,
       'createdAt': createdAt,

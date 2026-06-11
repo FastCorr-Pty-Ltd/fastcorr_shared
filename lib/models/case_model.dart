@@ -60,7 +60,13 @@ class CaseModel {
   final String? opposingAttorneyName;
 
   // Financial tracking
+  /// FastCorr platform spend on this matter (litigation/messenger request
+  /// costs debited from org credits), in cents.
   final int totalCost;
+  /// Client-billable work captured on this matter (fee entries + manual
+  /// disbursements), in cents. Does not include FastCorr spend — that is
+  /// tracked separately on [totalCost] and client invoices.
+  final int clientBillableCents;
   final int paidAmount;
   final int capitalAmount;
   final String scale;
@@ -91,6 +97,7 @@ class CaseModel {
     this.caseType,
     this.partyIds = const [],
     this.totalCost = 0,
+    this.clientBillableCents = 0,
     this.paidAmount = 0,
     this.courtDateIds = const [],
     this.requestIds = const [],
@@ -171,6 +178,7 @@ class CaseModel {
       caseType: json['caseType'] ?? '',
       partyIds: safeListFromJson(json['partyIds']),
       totalCost: safeToInt(json['totalCost']),
+      clientBillableCents: safeToInt(json['clientBillableCents']),
       paidAmount: safeToInt(json['paidAmount']),
       capitalAmount: safeToInt(json['capitalAmount']),
       scale: json['scale'] ?? '',
@@ -259,6 +267,7 @@ class CaseModel {
       caseType: snapshot['caseType'] ?? '',
       partyIds: safeListFromSnapshot(snapshot['partyIds']),
       totalCost: safeToInt(snapshot['totalCost']),
+      clientBillableCents: safeToInt(data['clientBillableCents']),
       paidAmount: safeToInt(snapshot['paidAmount']),
       capitalAmount: safeToInt(snapshot['capitalAmount']),
       scale: snapshot['scale'] ?? '',
@@ -309,6 +318,7 @@ class CaseModel {
       'caseType': caseType ?? '',
       'partyIds': safeListToJson(partyIds),
       'totalCost': totalCost,
+      'clientBillableCents': clientBillableCents,
       'paidAmount': paidAmount,
       'capitalAmount': capitalAmount,
       'scale': scale,
@@ -348,6 +358,7 @@ class CaseModel {
     String? caseType,
     List<String>? partyIds,
     int? totalCost,
+    int? clientBillableCents,
     int? paidAmount,
     int? capitalAmount,
     String? scale,
@@ -392,6 +403,7 @@ class CaseModel {
       caseType: caseType ?? this.caseType,
       partyIds: partyIds ?? this.partyIds,
       totalCost: totalCost ?? this.totalCost,
+      clientBillableCents: clientBillableCents ?? this.clientBillableCents,
       paidAmount: paidAmount ?? this.paidAmount,
       courtDateIds: courtDateIds ?? this.courtDateIds,
       requestIds: requestIds ?? this.requestIds,
@@ -413,7 +425,14 @@ class CaseModel {
   }
 
   // Helper getters
-  int get outstandingAmount => totalCost - paidAmount;
+  /// Alias for [totalCost] — spend on FastCorr platform services.
+  int get platformSpendCents => totalCost;
+
+  /// Outstanding FastCorr platform spend not yet marked paid on the case.
+  int get platformOutstandingCents => totalCost - paidAmount;
+
+  /// @deprecated Use [platformOutstandingCents]. Kept for legacy callers.
+  int get outstandingAmount => platformOutstandingCents;
   bool get isActive => status == CaseStatus.active;
   bool get isClosed => status == CaseStatus.closed;
 

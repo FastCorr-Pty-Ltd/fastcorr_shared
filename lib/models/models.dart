@@ -8,6 +8,7 @@ export 'contact_model.dart';
 export 'org_client_model.dart';
 export 'client_invoice_model.dart';
 export 'fee_entry_model.dart';
+export 'disbursement_entry_model.dart';
 export 'address_model.dart';
 export 'request_model.dart';
 export 'request_routing_status.dart';

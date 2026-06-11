@@ -87,7 +87,10 @@ class ClientInvoiceModel {
     this.account = 'business',
     this.status = InvoiceStatus.draft,
     this.lines = const [],
+    this.subtotalCents,
+    this.vatCents,
     this.totalCents = 0,
+    this.vatRate = 0.15,
     required this.createdAt,
     this.updatedAt,
     this.dueAt,
@@ -119,8 +122,17 @@ class ClientInvoiceModel {
   final InvoiceStatus status;
   final List<InvoiceLineModel> lines;
 
-  /// Sum of [lines] amounts (kept denormalised for list views).
+  /// Sum of [lines] before VAT (ex-VAT).
+  final int? subtotalCents;
+
+  /// VAT amount in cents.
+  final int? vatCents;
+
+  /// Grand total (subtotal + VAT), denormalised for list views.
   final int totalCents;
+
+  /// VAT rate applied when the invoice was issued (default 15%).
+  final double vatRate;
 
   final Timestamp createdAt;
   final Timestamp? updatedAt;
@@ -134,6 +146,22 @@ class ClientInvoiceModel {
 
   bool get isOutstanding =>
       status == InvoiceStatus.issued || status == InvoiceStatus.overdue;
+
+  /// Line sum; falls back to [subtotalCents] or [totalCents] for legacy docs.
+  int get effectiveSubtotalCents {
+    if (subtotalCents != null) return subtotalCents!;
+    if (lines.isNotEmpty) {
+      return lines.fold(0, (sum, l) => sum + l.amountCents);
+    }
+    return totalCents;
+  }
+
+  int get effectiveVatCents => vatCents ?? 0;
+
+  int get effectiveGrandTotalCents =>
+      subtotalCents != null && vatCents != null
+          ? totalCents
+          : effectiveSubtotalCents + effectiveVatCents;
 
   factory ClientInvoiceModel.fromJson(Map<String, dynamic> json) {
     List<InvoiceLineModel> safeLines(dynamic raw) {
@@ -159,7 +187,10 @@ class ClientInvoiceModel {
         json['status'] as String? ?? 'draft',
       ),
       lines: safeLines(json['lines']),
+      subtotalCents: (json['subtotalCents'] as num?)?.toInt(),
+      vatCents: (json['vatCents'] as num?)?.toInt(),
       totalCents: (json['totalCents'] as num?)?.toInt() ?? 0,
+      vatRate: (json['vatRate'] as num?)?.toDouble() ?? 0.15,
       createdAt: processedTimestamp(json['createdAt']) ?? Timestamp.now(),
       updatedAt: json['updatedAt'] != null
           ? processedTimestamp(json['updatedAt'])
@@ -191,7 +222,10 @@ class ClientInvoiceModel {
       'account': account,
       'status': status.name,
       'lines': lines.map((l) => l.toJson()).toList(),
+      'subtotalCents': subtotalCents,
+      'vatCents': vatCents,
       'totalCents': totalCents,
+      'vatRate': vatRate,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
       'dueAt': dueAt,
