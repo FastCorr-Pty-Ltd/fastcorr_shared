@@ -39,6 +39,7 @@ class MessengerDispatchMirror {
       'updatedAt': smPatch['updatedAt'],
     };
     const keys = <String>[
+      'driverId',
       'assignedAt',
       'readyForPickupAt',
       'acceptedAt',
