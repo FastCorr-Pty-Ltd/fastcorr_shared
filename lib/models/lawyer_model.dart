@@ -1,76 +1,52 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'subscription_status.dart';
 
-/// Lawyer/User model with subscription fields
+/// Lawyer / firm-user profile stored in `users/{uid}`.
 ///
-/// This file shows ALL the fields that need to be added to your existing LawyerModel.
-/// Copy the subscription fields section into your existing LawyerModel class.
+/// Serialization matches other fastcorr_shared models:
+/// - [fromJson] / [toJson] — map-based
+/// - [fromSnapshot] — Firestore document
+///
+/// [toMap] / [fromMap] are aliases kept for transitional call sites.
 class LawyerModel {
-  // ============================================
-  // EXISTING FIELDS (keep as-is)
-  // ============================================
   final String uid;
   final String name;
   final String email;
   final String phone;
   final String orgId;
-  final String role; // 'admin' | 'lawyer'
-  final bool mustChangePassword;
+  final String role;
+  final bool? mustChangePassword;
   final Timestamp createdAt;
   final GeoPoint? location;
+
+  /// Branch office document id under `offices/{officeId}` when assigned.
   final String? officeId;
 
-  // ============================================
-  // NEW SUBSCRIPTION FIELDS (add these)
-  // ============================================
-
-  /// RevenueCat customer ID
+  // —— Subscription / RevenueCat ——
   final String? revenueCatUserId;
-
-  /// Current subscription status
   final SubscriptionStatus subscriptionStatus;
-
-  /// Subscription tier (e.g., 'premium')
   final String? subscriptionTier;
-
-  /// When subscription started
   final Timestamp? subscriptionStartDate;
-
-  /// When subscription expires
   final Timestamp? subscriptionEndDate;
-
-  /// Whether user has premium access
   final bool isPremium;
-
-  /// Platform where subscription was purchased ('ios', 'android', 'web')
   final String? subscriptionPlatform;
-
-  /// Whether user has used their free trial
   final bool hasUsedTrial;
-
-  /// When trial started
   final Timestamp? trialStartDate;
-
-  /// When trial ends
   final Timestamp? trialEndDate;
-
-  /// Last time subscription status was synced from RevenueCat
   final Timestamp? lastSubscriptionSync;
 
   LawyerModel({
-    // Existing fields
     required this.uid,
     required this.name,
     required this.email,
-    required this.phone,
     required this.orgId,
     required this.role,
-    this.mustChangePassword = false,
+    required this.phone,
     required this.createdAt,
+    this.mustChangePassword,
     this.location,
     this.officeId,
-
-    // New subscription fields with defaults
     this.revenueCatUserId,
     this.subscriptionStatus = SubscriptionStatus.none,
     this.subscriptionTier,
@@ -84,52 +60,57 @@ class LawyerModel {
     this.lastSubscriptionSync,
   });
 
-  /// Create from Firestore document
-  factory LawyerModel.fromMap(Map<String, dynamic> map) {
+  factory LawyerModel.fromJson(Map<String, dynamic> json) {
     return LawyerModel(
-      // Existing fields
-      uid: map['uid'] ?? '',
-      name: map['name'] ?? '',
-      email: map['email'] ?? '',
-      phone: map['phone'] ?? '',
-      orgId: map['orgId'] ?? '',
-      role: map['role'] ?? 'lawyer',
-      mustChangePassword: map['mustChangePassword'] ?? false,
-      createdAt: map['createdAt'] ?? Timestamp.now(),
-      location: map['location'],
-      officeId: map['officeId'],
-
-      // New subscription fields
-      revenueCatUserId: map['revenueCatUserId'],
-      subscriptionStatus: _parseSubscriptionStatus(map['subscriptionStatus']),
-      subscriptionTier: map['subscriptionTier'],
-      subscriptionStartDate: map['subscriptionStartDate'],
-      subscriptionEndDate: map['subscriptionEndDate'],
-      isPremium: map['isPremium'] ?? false,
-      subscriptionPlatform: map['subscriptionPlatform'],
-      hasUsedTrial: map['hasUsedTrial'] ?? false,
-      trialStartDate: map['trialStartDate'],
-      trialEndDate: map['trialEndDate'],
-      lastSubscriptionSync: map['lastSubscriptionSync'],
+      uid: (json['uid'] as String?) ?? '',
+      name: (json['name'] as String?) ?? '',
+      phone: (json['phone'] as String?) ?? '',
+      email: (json['email'] as String?) ?? '',
+      orgId: (json['orgId'] as String?) ?? '',
+      role: (json['role'] as String?) ?? 'lawyer',
+      createdAt: _asTimestamp(json['createdAt']) ?? Timestamp.now(),
+      mustChangePassword: json['mustChangePassword'] as bool? ?? false,
+      location: _asGeoPoint(json['location']),
+      officeId: json['officeId'] as String?,
+      revenueCatUserId: json['revenueCatUserId'] as String?,
+      subscriptionStatus: _parseSubscriptionStatus(json['subscriptionStatus']),
+      subscriptionTier: json['subscriptionTier'] as String?,
+      subscriptionStartDate: _asTimestamp(json['subscriptionStartDate']),
+      subscriptionEndDate: _asTimestamp(json['subscriptionEndDate']),
+      isPremium: json['isPremium'] as bool? ?? false,
+      subscriptionPlatform: json['subscriptionPlatform'] as String?,
+      hasUsedTrial: json['hasUsedTrial'] as bool? ?? false,
+      trialStartDate: _asTimestamp(json['trialStartDate']),
+      trialEndDate: _asTimestamp(json['trialEndDate']),
+      lastSubscriptionSync: _asTimestamp(json['lastSubscriptionSync']),
     );
   }
 
-  /// Convert to Firestore document
-  Map<String, dynamic> toMap() {
+  /// Alias for [fromJson] (transitional).
+  factory LawyerModel.fromMap(Map<String, dynamic> map) =>
+      LawyerModel.fromJson(map);
+
+  factory LawyerModel.fromSnapshot(DocumentSnapshot snap) {
+    final raw = snap.data();
+    final m = raw is Map<String, dynamic>
+        ? Map<String, dynamic>.from(raw)
+        : <String, dynamic>{};
+    m['uid'] = snap.id;
+    return LawyerModel.fromJson(m);
+  }
+
+  Map<String, dynamic> toJson() {
     return {
-      // Existing fields
       'uid': uid,
       'name': name,
       'email': email,
       'phone': phone,
       'orgId': orgId,
       'role': role,
-      'mustChangePassword': mustChangePassword,
       'createdAt': createdAt,
+      'mustChangePassword': mustChangePassword,
       'location': location,
-      'officeId': officeId,
-
-      // New subscription fields
+      if (officeId != null && officeId!.isNotEmpty) 'officeId': officeId,
       'revenueCatUserId': revenueCatUserId,
       'subscriptionStatus': subscriptionStatus.name,
       'subscriptionTier': subscriptionTier,
@@ -144,16 +125,18 @@ class LawyerModel {
     };
   }
 
-  /// Create a copy with updated fields
+  /// Alias for [toJson] (transitional).
+  Map<String, dynamic> toMap() => toJson();
+
   LawyerModel copyWith({
     String? uid,
     String? name,
     String? email,
-    String? phone,
     String? orgId,
+    String? phone,
     String? role,
-    bool? mustChangePassword,
     Timestamp? createdAt,
+    bool? mustChangePassword,
     GeoPoint? location,
     String? officeId,
     String? revenueCatUserId,
@@ -167,37 +150,51 @@ class LawyerModel {
     Timestamp? trialStartDate,
     Timestamp? trialEndDate,
     Timestamp? lastSubscriptionSync,
-  }) {
-    return LawyerModel(
-      uid: uid ?? this.uid,
-      name: name ?? this.name,
-      email: email ?? this.email,
-      phone: phone ?? this.phone,
-      orgId: orgId ?? this.orgId,
-      role: role ?? this.role,
-      mustChangePassword: mustChangePassword ?? this.mustChangePassword,
-      createdAt: createdAt ?? this.createdAt,
-      location: location ?? this.location,
-      officeId: officeId ?? this.officeId,
-      revenueCatUserId: revenueCatUserId ?? this.revenueCatUserId,
-      subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
-      subscriptionTier: subscriptionTier ?? this.subscriptionTier,
-      subscriptionStartDate:
-          subscriptionStartDate ?? this.subscriptionStartDate,
-      subscriptionEndDate: subscriptionEndDate ?? this.subscriptionEndDate,
-      isPremium: isPremium ?? this.isPremium,
-      subscriptionPlatform: subscriptionPlatform ?? this.subscriptionPlatform,
-      hasUsedTrial: hasUsedTrial ?? this.hasUsedTrial,
-      trialStartDate: trialStartDate ?? this.trialStartDate,
-      trialEndDate: trialEndDate ?? this.trialEndDate,
-      lastSubscriptionSync: lastSubscriptionSync ?? this.lastSubscriptionSync,
-    );
+  }) =>
+      LawyerModel(
+        uid: uid ?? this.uid,
+        name: name ?? this.name,
+        email: email ?? this.email,
+        phone: phone ?? this.phone,
+        orgId: orgId ?? this.orgId,
+        role: role ?? this.role,
+        createdAt: createdAt ?? this.createdAt,
+        mustChangePassword: mustChangePassword ?? this.mustChangePassword,
+        location: location ?? this.location,
+        officeId: officeId ?? this.officeId,
+        revenueCatUserId: revenueCatUserId ?? this.revenueCatUserId,
+        subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
+        subscriptionTier: subscriptionTier ?? this.subscriptionTier,
+        subscriptionStartDate:
+            subscriptionStartDate ?? this.subscriptionStartDate,
+        subscriptionEndDate: subscriptionEndDate ?? this.subscriptionEndDate,
+        isPremium: isPremium ?? this.isPremium,
+        subscriptionPlatform: subscriptionPlatform ?? this.subscriptionPlatform,
+        hasUsedTrial: hasUsedTrial ?? this.hasUsedTrial,
+        trialStartDate: trialStartDate ?? this.trialStartDate,
+        trialEndDate: trialEndDate ?? this.trialEndDate,
+        lastSubscriptionSync: lastSubscriptionSync ?? this.lastSubscriptionSync,
+      );
+
+  int get daysUntilExpiry {
+    if (subscriptionEndDate == null) return 0;
+    return subscriptionEndDate!.toDate().difference(DateTime.now()).inDays;
+  }
+
+  bool get isExpiringSoon => daysUntilExpiry > 0 && daysUntilExpiry <= 7;
+
+  bool get isInTrial => subscriptionStatus == SubscriptionStatus.trial;
+
+  String get subscriptionStatusDisplay {
+    if (isInTrial) {
+      return 'Trial ($daysUntilExpiry days left)';
+    }
+    return subscriptionStatus.displayName;
   }
 
   static SubscriptionStatus _parseSubscriptionStatus(dynamic value) {
     if (value == null) return SubscriptionStatus.none;
     if (value is SubscriptionStatus) return value;
-
     try {
       return SubscriptionStatus.values.firstWhere(
         (e) => e.name == value.toString(),
@@ -208,27 +205,37 @@ class LawyerModel {
     }
   }
 
-  // Computed properties
-
-  /// Days until subscription expires
-  int get daysUntilExpiry {
-    if (subscriptionEndDate == null) return 0;
-    final now = DateTime.now();
-    final end = subscriptionEndDate!.toDate();
-    return end.difference(now).inDays;
+  static Timestamp? _asTimestamp(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value;
+    if (value is DateTime) return Timestamp.fromDate(value);
+    if (value is String) {
+      final parsed = DateTime.tryParse(value);
+      if (parsed != null) return Timestamp.fromDate(parsed);
+    }
+    if (value is int) {
+      return Timestamp.fromMillisecondsSinceEpoch(value);
+    }
+    if (value is Map) {
+      final seconds = value['seconds'] ?? value['_seconds'];
+      final nanos = value['nanoseconds'] ?? value['_nanoseconds'] ?? 0;
+      if (seconds is int) {
+        return Timestamp(seconds, nanos is int ? nanos : 0);
+      }
+    }
+    return null;
   }
 
-  /// Is subscription expiring soon (< 7 days)
-  bool get isExpiringSoon => daysUntilExpiry > 0 && daysUntilExpiry <= 7;
-
-  /// Is user in trial period
-  bool get isInTrial => subscriptionStatus == SubscriptionStatus.trial;
-
-  /// Display text for subscription status
-  String get subscriptionStatusDisplay {
-    if (isInTrial) {
-      return 'Trial ($daysUntilExpiry days left)';
+  static GeoPoint? _asGeoPoint(dynamic value) {
+    if (value == null) return null;
+    if (value is GeoPoint) return value;
+    if (value is Map) {
+      final lat = value['latitude'] ?? value['lat'];
+      final lng = value['longitude'] ?? value['lng'] ?? value['lon'];
+      if (lat is num && lng is num) {
+        return GeoPoint(lat.toDouble(), lng.toDouble());
+      }
     }
-    return subscriptionStatus.displayName;
+    return null;
   }
 }

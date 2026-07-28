@@ -7,7 +7,7 @@ class SubscriptionEvent {
   final Timestamp eventDate;
   final String? revenueCatEventId;
   final Map<String, dynamic>? metadata;
-
+  
   SubscriptionEvent({
     required this.eventId,
     required this.eventType,
@@ -15,7 +15,7 @@ class SubscriptionEvent {
     this.revenueCatEventId,
     this.metadata,
   });
-
+  
   /// Create from Firestore document
   factory SubscriptionEvent.fromMap(Map<String, dynamic> map) {
     return SubscriptionEvent(
@@ -23,12 +23,12 @@ class SubscriptionEvent {
       eventType: map['eventType'] ?? '',
       eventDate: map['eventDate'] ?? Timestamp.now(),
       revenueCatEventId: map['revenueCatEventId'],
-      metadata: map['metadata'] != null
-          ? Map<String, dynamic>.from(map['metadata'])
-          : null,
+      metadata: map['metadata'] != null 
+        ? Map<String, dynamic>.from(map['metadata']) 
+        : null,
     );
   }
-
+  
   /// Convert to Firestore document
   Map<String, dynamic> toMap() {
     return {
@@ -39,7 +39,7 @@ class SubscriptionEvent {
       'metadata': metadata,
     };
   }
-
+  
   /// Event type constants
   static const String trialStarted = 'trial_started';
   static const String subscribed = 'subscribed';

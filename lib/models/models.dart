@@ -24,6 +24,7 @@ export 'client_alert_model.dart';
 export 'tracked_order.dart';
 export 'lawyer_model.dart';
 export 'premium_feature_model.dart';
+export 'premium_feature.dart';
 export 'revenuecat_webhook_log.dart';
 export 'subscription_event.dart';
 export 'subscription_status.dart';

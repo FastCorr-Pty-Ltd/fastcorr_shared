@@ -2,26 +2,26 @@
 enum PremiumFeature {
   /// Billing & Invoicing features
   billing('Billing & Invoicing'),
-
+  
   /// Advanced analytics and reports
   advancedAnalytics('Advanced Analytics'),
-
+  
   /// Unlimited case storage
   unlimitedCases('Unlimited Cases'),
-
+  
   /// Unlimited document storage
   unlimitedStorage('Unlimited Document Storage'),
-
+  
   /// Bulk data export
   bulkExport('Bulk Export'),
-
+  
   /// API access (future feature)
   apiAccess('API Access');
-
+  
   const PremiumFeature(this.displayName);
-
+  
   final String displayName;
-
+  
   /// Get feature description
   String get description {
     switch (this) {
@@ -39,7 +39,7 @@ enum PremiumFeature {
         return 'Access FastCorr API for integrations and automation';
     }
   }
-
+  
   /// Get list of benefits for this feature
   List<String> get benefits {
     switch (this) {
@@ -69,7 +69,7 @@ enum PremiumFeature {
       case PremiumFeature.unlimitedStorage:
         return [
           'Unlimited file uploads',
-          'No storage cap per organization',
+          'No storage cap per seat',
           'All file types supported',
           'High-resolution document storage',
         ];
@@ -89,7 +89,7 @@ enum PremiumFeature {
         ];
     }
   }
-
+  
   /// Icon name for UI (using Material Icons)
   String get iconName {
     switch (this) {

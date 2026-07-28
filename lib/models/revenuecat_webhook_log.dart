@@ -9,7 +9,7 @@ class RevenueCatWebhookLog {
   final bool processed;
   final String? errorMessage;
   final Timestamp? processedAt;
-
+  
   RevenueCatWebhookLog({
     required this.webhookId,
     required this.eventType,
@@ -19,7 +19,7 @@ class RevenueCatWebhookLog {
     this.errorMessage,
     this.processedAt,
   });
-
+  
   /// Create from Firestore document
   factory RevenueCatWebhookLog.fromMap(Map<String, dynamic> map) {
     return RevenueCatWebhookLog(
@@ -32,7 +32,7 @@ class RevenueCatWebhookLog {
       processedAt: map['processedAt'],
     );
   }
-
+  
   /// Convert to Firestore document
   Map<String, dynamic> toMap() {
     return {
@@ -45,7 +45,7 @@ class RevenueCatWebhookLog {
       'processedAt': processedAt,
     };
   }
-
+  
   /// Mark as processed
   RevenueCatWebhookLog markProcessed({String? error}) {
     return RevenueCatWebhookLog(
