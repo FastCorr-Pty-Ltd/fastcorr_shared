@@ -19,7 +19,7 @@ class CommunicationChannelLabels {
   static const String support = 'Support';
 
   /// Staff / org internal threads ([InternalCommsWidget], not case comms or order chat).
-  static const String internalCommunications = 'Internal communications';
+  static const String internalCommunications = 'Chats';
 
   /// One-line context for order chat panels.
   static const String orderChatScopeHint =
