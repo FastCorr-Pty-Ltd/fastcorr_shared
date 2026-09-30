@@ -31,6 +31,9 @@ enum Status {
 
   /// Lawyer requested cancellation; awaits office approval before final cancel/refund.
   cancelPending,
+
+  /// Issuing parent is paused between driver trips. Driver jobs do not use this.
+  awaitingInstruction,
 }
 
 /// Human-readable label for each [Status].
@@ -67,6 +70,8 @@ extension StatusDisplayExtension on Status {
         return 'Escalated';
       case Status.cancelPending:
         return 'Cancellation pending review';
+      case Status.awaitingInstruction:
+        return 'On hold';
     }
   }
 }
@@ -171,6 +176,24 @@ class RequestModel {
   final DateTime? routedAt;
   final String? routedBy;
 
+  /// True only on issuing orders created after this workflow shipped.
+  final bool issuingWorkflow;
+  final IssuingStage? issuingStage;
+  final bool requiresSheriffService;
+  final String? issuingCourtName;
+  final String? issuingCourtAddress;
+  final String? issuingSheriffName;
+  final String? issuingSheriffAddress;
+  final GeoPoint? issuingSheriffLocation;
+  final DateTime? courtDeliveredAt;
+  final bool followUpPromptedDay3;
+  final bool followUpPromptedDay7;
+  final String? activeTripOrderId;
+  final String? bulkBatchId;
+  final int? bulkSequence;
+  final int? bulkCount;
+  final String? nextBulkOrderId;
+
   RequestModel({
     required this.orderId,
     required this.title,
@@ -223,6 +246,22 @@ class RequestModel {
     this.routingReason,
     this.routedAt,
     this.routedBy,
+    this.issuingWorkflow = false,
+    this.issuingStage,
+    this.requiresSheriffService = false,
+    this.issuingCourtName,
+    this.issuingCourtAddress,
+    this.issuingSheriffName,
+    this.issuingSheriffAddress,
+    this.issuingSheriffLocation,
+    this.courtDeliveredAt,
+    this.followUpPromptedDay3 = false,
+    this.followUpPromptedDay7 = false,
+    this.activeTripOrderId,
+    this.bulkBatchId,
+    this.bulkSequence,
+    this.bulkCount,
+    this.nextBulkOrderId,
   });
 
   factory RequestModel.fromJson(Map<String, dynamic> json) {
@@ -291,6 +330,28 @@ class RequestModel {
       routingReason: json['routingReason']?.toString(),
       routedAt: _parseDateTime(json['routedAt']),
       routedBy: json['routedBy']?.toString(),
+      issuingWorkflow: json['issuingWorkflow'] == true,
+      issuingStage: parseIssuingStage(json['issuingStage']),
+      requiresSheriffService: json['requiresSheriffService'] == true,
+      issuingCourtName: json['issuingCourtName']?.toString(),
+      issuingCourtAddress: json['issuingCourtAddress']?.toString(),
+      issuingSheriffName: json['issuingSheriffName']?.toString(),
+      issuingSheriffAddress: json['issuingSheriffAddress']?.toString(),
+      issuingSheriffLocation: processedGeoPoint(json['issuingSheriffLocation']),
+      courtDeliveredAt: json['courtDeliveredAt'] == null
+          ? null
+          : _parseTimestamp(json['courtDeliveredAt']),
+      followUpPromptedDay3: json['followUpPromptedDay3'] == true,
+      followUpPromptedDay7: json['followUpPromptedDay7'] == true,
+      activeTripOrderId: json['activeTripOrderId']?.toString(),
+      bulkBatchId: json['bulkBatchId']?.toString(),
+      bulkSequence: json['bulkSequence'] is int
+          ? json['bulkSequence'] as int
+          : int.tryParse('${json['bulkSequence'] ?? ''}'),
+      bulkCount: json['bulkCount'] is int
+          ? json['bulkCount'] as int
+          : int.tryParse('${json['bulkCount'] ?? ''}'),
+      nextBulkOrderId: json['nextBulkOrderId']?.toString(),
     );
   }
 
@@ -362,6 +423,26 @@ class RequestModel {
       routingReason: data['routingReason']?.toString(),
       routedAt: _parseTimestamp(data['routedAt']),
       routedBy: data['routedBy']?.toString(),
+      issuingWorkflow: data['issuingWorkflow'] == true,
+      issuingStage: parseIssuingStage(data['issuingStage']),
+      requiresSheriffService: data['requiresSheriffService'] == true,
+      issuingCourtName: data['issuingCourtName']?.toString(),
+      issuingCourtAddress: data['issuingCourtAddress']?.toString(),
+      issuingSheriffName: data['issuingSheriffName']?.toString(),
+      issuingSheriffAddress: data['issuingSheriffAddress']?.toString(),
+      issuingSheriffLocation: processedGeoPoint(data['issuingSheriffLocation']),
+      courtDeliveredAt: _parseTimestamp(data['courtDeliveredAt']),
+      followUpPromptedDay3: data['followUpPromptedDay3'] == true,
+      followUpPromptedDay7: data['followUpPromptedDay7'] == true,
+      activeTripOrderId: data['activeTripOrderId']?.toString(),
+      bulkBatchId: data['bulkBatchId']?.toString(),
+      bulkSequence: data['bulkSequence'] is int
+          ? data['bulkSequence'] as int
+          : int.tryParse('${data['bulkSequence'] ?? ''}'),
+      bulkCount: data['bulkCount'] is int
+          ? data['bulkCount'] as int
+          : int.tryParse('${data['bulkCount'] ?? ''}'),
+      nextBulkOrderId: data['nextBulkOrderId']?.toString(),
     );
   }
 
@@ -444,6 +525,31 @@ class RequestModel {
       if (routingReason != null) 'routingReason': routingReason,
       if (routedAt != null) 'routedAt': Timestamp.fromDate(routedAt!),
       if (routedBy != null) 'routedBy': routedBy,
+      if (issuingWorkflow) ...{
+        'issuingWorkflow': true,
+        'issuingStage': issuingStage?.name,
+        'requiresSheriffService': requiresSheriffService,
+        if (issuingCourtName != null) 'issuingCourtName': issuingCourtName,
+        if (issuingCourtAddress != null)
+          'issuingCourtAddress': issuingCourtAddress,
+        if (issuingSheriffName != null) 'issuingSheriffName': issuingSheriffName,
+        if (issuingSheriffAddress != null)
+          'issuingSheriffAddress': issuingSheriffAddress,
+        if (issuingSheriffLocation != null)
+          'issuingSheriffLocation': issuingSheriffLocation,
+        if (courtDeliveredAt != null)
+          'courtDeliveredAt': Timestamp.fromDate(courtDeliveredAt!),
+        'followUpPromptedDay3': followUpPromptedDay3,
+        'followUpPromptedDay7': followUpPromptedDay7,
+        if (activeTripOrderId != null) 'activeTripOrderId': activeTripOrderId,
+      },
+      if (bulkBatchId != null && bulkBatchId!.isNotEmpty) ...{
+        'bulkBatchId': bulkBatchId,
+        if (bulkSequence != null) 'bulkSequence': bulkSequence,
+        if (bulkCount != null) 'bulkCount': bulkCount,
+        if (nextBulkOrderId != null && nextBulkOrderId!.isNotEmpty)
+          'nextBulkOrderId': nextBulkOrderId,
+      },
     };
   }
 
@@ -499,6 +605,22 @@ class RequestModel {
     String? routingReason,
     DateTime? routedAt,
     String? routedBy,
+    bool? issuingWorkflow,
+    IssuingStage? issuingStage,
+    bool? requiresSheriffService,
+    String? issuingCourtName,
+    String? issuingCourtAddress,
+    String? issuingSheriffName,
+    String? issuingSheriffAddress,
+    GeoPoint? issuingSheriffLocation,
+    DateTime? courtDeliveredAt,
+    bool? followUpPromptedDay3,
+    bool? followUpPromptedDay7,
+    String? activeTripOrderId,
+    String? bulkBatchId,
+    int? bulkSequence,
+    int? bulkCount,
+    String? nextBulkOrderId,
   }) {
     return RequestModel(
       orderId: orderId ?? this.orderId,
@@ -553,6 +675,25 @@ class RequestModel {
       routingReason: routingReason ?? this.routingReason,
       routedAt: routedAt ?? this.routedAt,
       routedBy: routedBy ?? this.routedBy,
+      issuingWorkflow: issuingWorkflow ?? this.issuingWorkflow,
+      issuingStage: issuingStage ?? this.issuingStage,
+      requiresSheriffService:
+          requiresSheriffService ?? this.requiresSheriffService,
+      issuingCourtName: issuingCourtName ?? this.issuingCourtName,
+      issuingCourtAddress: issuingCourtAddress ?? this.issuingCourtAddress,
+      issuingSheriffName: issuingSheriffName ?? this.issuingSheriffName,
+      issuingSheriffAddress:
+          issuingSheriffAddress ?? this.issuingSheriffAddress,
+      issuingSheriffLocation:
+          issuingSheriffLocation ?? this.issuingSheriffLocation,
+      courtDeliveredAt: courtDeliveredAt ?? this.courtDeliveredAt,
+      followUpPromptedDay3: followUpPromptedDay3 ?? this.followUpPromptedDay3,
+      followUpPromptedDay7: followUpPromptedDay7 ?? this.followUpPromptedDay7,
+      activeTripOrderId: activeTripOrderId ?? this.activeTripOrderId,
+      bulkBatchId: bulkBatchId ?? this.bulkBatchId,
+      bulkSequence: bulkSequence ?? this.bulkSequence,
+      bulkCount: bulkCount ?? this.bulkCount,
+      nextBulkOrderId: nextBulkOrderId ?? this.nextBulkOrderId,
     );
   }
 
@@ -672,6 +813,8 @@ class RequestModel {
         return Colors.red;
       case Status.cancelPending:
         return Colors.deepOrange;
+      case Status.awaitingInstruction:
+        return Colors.teal;
       case Status.accepted:
         return Colors.blue;
       case Status.arrivedAtPickup:
@@ -758,6 +901,8 @@ class RequestModel {
         return 'Canceled';
       case Status.cancelPending:
         return 'Cancellation pending review';
+      case Status.awaitingInstruction:
+        return 'On hold';
       case Status.accepted:
         return 'Accepted';
       case Status.arrivedAtPickup:

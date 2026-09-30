@@ -21,6 +21,8 @@ class _Subject implements StatefulRequest {
   final String? statusBeforeCancelPending;
   @override
   final ActionType? actionType;
+  @override
+  final bool issuingWorkflow;
 
   const _Subject({
     required this.currentStatus,
@@ -30,6 +32,7 @@ class _Subject implements StatefulRequest {
     this.subjectId = 'test-req',
     this.statusBeforeCancelPending,
     this.actionType,
+    this.issuingWorkflow = false,
   });
 
   _Subject copyWith({
@@ -46,6 +49,7 @@ class _Subject implements StatefulRequest {
     subjectId: subjectId,
     statusBeforeCancelPending: statusBeforeCancelPending,
     actionType: actionType ?? this.actionType,
+    issuingWorkflow: issuingWorkflow,
   );
 }
 
@@ -55,6 +59,7 @@ _Subject lit(
   String? assigneeId,
   String? driverId,
   ActionType? actionType,
+  bool issuingWorkflow = false,
 }) =>
     _Subject(
       currentStatus: s,
@@ -62,6 +67,7 @@ _Subject lit(
       assigneeId: assigneeId,
       driverId: driverId,
       actionType: actionType,
+      issuingWorkflow: issuingWorkflow,
     );
 _Subject msg(Status s, {String? driverId}) =>
     _Subject(currentStatus: s, flow: RequestFlow.messenger, driverId: driverId);
@@ -464,6 +470,26 @@ void main() {
   // =========================================================================
 
   group('preconditions', () {
+    test('assigned → awaitingInstruction is blocked unless the order is issuing', () {
+      final blocked = RequestStateMachine.validateTransition(
+        subject: lit(Status.assigned, assigneeId: 'sec-1'),
+        to: Status.awaitingInstruction,
+        actor: ActorRole.secretary,
+      );
+      expect(blocked, isA<PreconditionFailed>());
+
+      final allowed = RequestStateMachine.validateTransition(
+        subject: lit(
+          Status.assigned,
+          assigneeId: 'sec-1',
+          issuingWorkflow: true,
+        ),
+        to: Status.awaitingInstruction,
+        actor: ActorRole.secretary,
+      );
+      expect(allowed, isA<TransitionAllowed>());
+    });
+
     test('readyForPickup → pickedup fails without a driver assigned', () {
       final r = RequestStateMachine.validateTransition(
         subject: lit(Status.readyForPickup), // no driverId
@@ -548,7 +574,7 @@ void main() {
 
   group('legalNextStates', () {
     test(
-      'secretary on assigned litigation sees {inProgress, readyForPickup, rejected, completed} (upper bound)',
+      'secretary on assigned litigation sees the upper bound including issuing hold',
       () {
       final out = RequestStateMachine.legalNextStates(
         subject: lit(Status.assigned, assigneeId: 'sec-1'),
@@ -559,6 +585,7 @@ void main() {
         Status.readyForPickup,
         Status.rejected,
         Status.completed,
+        Status.awaitingInstruction,
       });
     });
 

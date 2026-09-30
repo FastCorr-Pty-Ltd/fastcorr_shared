@@ -40,4 +40,7 @@ class RequestModelState implements StatefulRequest {
 
   @override
   ActionType? get actionType => _request.actionType;
+
+  @override
+  bool get issuingWorkflow => _request.issuingWorkflow;
 }

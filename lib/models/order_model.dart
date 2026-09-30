@@ -38,6 +38,17 @@ class OrderModel {
   /// Optional link to the matter for navigation (case comms live under this case).
   final String? caseFileId;
 
+  /// Set on a driver trip that belongs to an issuing parent. The driver
+  /// completes this order on its own. The parent stays on litigation_requests.
+  final String? parentOrderId;
+  final IssuingTripKind? issuingTripKind;
+
+  /// Set together when a secretary assigns this job as part of a bulk queue.
+  final String? bulkBatchId;
+  final int? bulkSequence;
+  final int? bulkCount;
+  final String? nextBulkOrderId;
+
   /// Financial information (stored as cents/minor value)
   final int cost;
   final int driverFare;
@@ -85,6 +96,12 @@ class OrderModel {
     this.receiptId,
     required this.selfService,
     this.caseFileId,
+    this.parentOrderId,
+    this.issuingTripKind,
+    this.bulkBatchId,
+    this.bulkSequence,
+    this.bulkCount,
+    this.nextBulkOrderId,
   });
 
   /// Builds an [OrderModel] from a Firestore document.
@@ -133,6 +150,16 @@ class OrderModel {
     receiptId: json['receiptId'] ?? '',
     selfService: json['selfService'] ?? false,
     caseFileId: _parseOptionalId(json['caseFileId']),
+    parentOrderId: _parseOptionalId(json['parentOrderId']),
+    issuingTripKind: parseIssuingTripKind(json['issuingTripKind']),
+    bulkBatchId: _parseOptionalId(json['bulkBatchId']),
+    bulkSequence: json['bulkSequence'] is int
+        ? json['bulkSequence'] as int
+        : int.tryParse('${json['bulkSequence'] ?? ''}'),
+    bulkCount: json['bulkCount'] is int
+        ? json['bulkCount'] as int
+        : int.tryParse('${json['bulkCount'] ?? ''}'),
+    nextBulkOrderId: _parseOptionalId(json['nextBulkOrderId']),
   );
 
   Map<String, dynamic> toJson() {
@@ -173,6 +200,16 @@ class OrderModel {
       'receiptId': receiptId,
       'selfService': selfService,
       if (caseFileId != null && caseFileId!.isNotEmpty) 'caseFileId': caseFileId,
+      if (parentOrderId != null && parentOrderId!.isNotEmpty)
+        'parentOrderId': parentOrderId,
+      if (issuingTripKind != null) 'issuingTripKind': issuingTripKind!.name,
+      if (bulkBatchId != null && bulkBatchId!.isNotEmpty) ...{
+        'bulkBatchId': bulkBatchId,
+        if (bulkSequence != null) 'bulkSequence': bulkSequence,
+        if (bulkCount != null) 'bulkCount': bulkCount,
+        if (nextBulkOrderId != null && nextBulkOrderId!.isNotEmpty)
+          'nextBulkOrderId': nextBulkOrderId,
+      },
     };
   }
 
@@ -205,6 +242,12 @@ class OrderModel {
     String? receiptId,
     bool? selfService,
     String? caseFileId,
+    String? parentOrderId,
+    IssuingTripKind? issuingTripKind,
+    String? bulkBatchId,
+    int? bulkSequence,
+    int? bulkCount,
+    String? nextBulkOrderId,
   }) => OrderModel(
     orderId: orderId ?? this.orderId,
     serviceTitle: serviceTitle ?? this.serviceTitle,
@@ -235,6 +278,12 @@ class OrderModel {
     receiptId: receiptId ?? this.receiptId,
     selfService: selfService ?? this.selfService,
     caseFileId: caseFileId ?? this.caseFileId,
+    parentOrderId: parentOrderId ?? this.parentOrderId,
+    issuingTripKind: issuingTripKind ?? this.issuingTripKind,
+    bulkBatchId: bulkBatchId ?? this.bulkBatchId,
+    bulkSequence: bulkSequence ?? this.bulkSequence,
+    bulkCount: bulkCount ?? this.bulkCount,
+    nextBulkOrderId: nextBulkOrderId ?? this.nextBulkOrderId,
   );
 
   /// Get the most recent status change timestamp

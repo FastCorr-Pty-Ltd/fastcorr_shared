@@ -101,11 +101,12 @@ const List<Transition> allowedTransitions = [
     flows: {RequestFlow.litigation},
     actors: {ActorRole.secretary, ActorRole.officeAdmin, ActorRole.superAdmin},
     timestampField: 'readyForPickupAt',
-    notifies: {ActorRole.lawyer, ActorRole.deliveryCoordinator},
+    notifies: {ActorRole.lawyer},
     policyNote:
         'Skips the assigned/inProgress office-prep stages when status was '
         'stuck on pending; TaskService may heal assigneeId/routing in the '
-        'same write.',
+        'same write. Coordinator is not notified — litigation pickup is '
+        'driver-assigned from the secretary/task screens, not the messenger board.',
   ),
 
   // =========================================================================
@@ -127,7 +128,7 @@ const List<Transition> allowedTransitions = [
     flows: {RequestFlow.litigation},
     actors: {ActorRole.secretary},
     timestampField: 'readyForPickupAt',
-    notifies: {ActorRole.lawyer, ActorRole.deliveryCoordinator},
+    notifies: {ActorRole.lawyer},
   ),
 
   Transition(
@@ -136,7 +137,7 @@ const List<Transition> allowedTransitions = [
     flows: {RequestFlow.litigation},
     actors: {ActorRole.secretary},
     timestampField: 'readyForPickupAt',
-    notifies: {ActorRole.lawyer, ActorRole.deliveryCoordinator},
+    notifies: {ActorRole.lawyer},
   ),
 
   // =========================================================================
@@ -550,7 +551,7 @@ const List<Transition> allowedTransitions = [
     requiresReason: true,
     reasonField: 'recoveryReason',
     timestampField: 'readyForPickupAt',
-    notifies: {ActorRole.lawyer, ActorRole.deliveryCoordinator},
+    notifies: {ActorRole.lawyer},
   ),
 
   // --- Escalated → resume messenger at the right stage.
@@ -607,7 +608,7 @@ const List<Transition> allowedTransitions = [
     to: Status.readyForPickup,
     flows: {RequestFlow.litigation},
     actors: {ActorRole.officeAdmin, ActorRole.system},
-    notifies: {ActorRole.lawyer, ActorRole.deliveryCoordinator},
+    notifies: {ActorRole.lawyer},
   ),
   Transition(
     from: Status.overdue,
@@ -640,6 +641,98 @@ const List<Transition> allowedTransitions = [
     reasonField: 'cancelReason',
     notifies: {ActorRole.lawyer, ActorRole.secretary, ActorRole.driver},
   ),
+
+  // =========================================================================
+  // (10) ISSUING PARENT — between driver trips
+  // =========================================================================
+  //
+  // These edges apply only when [StatefulRequest.issuingWorkflow] is true.
+  // The driver never completes the parent. Each trip is a separate delivery
+  // order that uses the normal pickedup → completed edge.
+
+  Transition(
+    from: Status.pending,
+    to: Status.awaitingInstruction,
+    flows: {RequestFlow.litigation},
+    actors: {
+      ActorRole.secretary,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+      ActorRole.system,
+    },
+    precondition: _isIssuingWorkflow,
+    preconditionDescription: 'request must be an issuing workflow order',
+    notifies: {ActorRole.lawyer},
+    policyNote: 'Parent leaves the driver queue when the court drop-off trip is released.',
+  ),
+  Transition(
+    from: Status.assigned,
+    to: Status.awaitingInstruction,
+    flows: {RequestFlow.litigation},
+    actors: {
+      ActorRole.secretary,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+      ActorRole.system,
+    },
+    precondition: _isIssuingWorkflow,
+    preconditionDescription: 'request must be an issuing workflow order',
+    notifies: {ActorRole.lawyer},
+  ),
+  Transition(
+    from: Status.inProgress,
+    to: Status.awaitingInstruction,
+    flows: {RequestFlow.litigation},
+    actors: {
+      ActorRole.secretary,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+      ActorRole.system,
+    },
+    precondition: _isIssuingWorkflow,
+    preconditionDescription: 'request must be an issuing workflow order',
+    notifies: {ActorRole.lawyer},
+  ),
+  Transition(
+    from: Status.readyForPickup,
+    to: Status.awaitingInstruction,
+    flows: {RequestFlow.litigation},
+    actors: {
+      ActorRole.secretary,
+      ActorRole.officeAdmin,
+      ActorRole.superAdmin,
+      ActorRole.system,
+    },
+    precondition: _isIssuingWorkflow,
+    preconditionDescription: 'request must be an issuing workflow order',
+    notifies: {ActorRole.lawyer},
+  ),
+  Transition(
+    from: Status.awaitingInstruction,
+    to: Status.assigned,
+    flows: {RequestFlow.litigation},
+    actors: {ActorRole.lawyer, ActorRole.system},
+    timestampField: 'assignedAt',
+    precondition: _isIssuingWorkflow,
+    preconditionDescription: 'request must be an issuing workflow order',
+    notifies: {ActorRole.secretary, ActorRole.lawyer},
+    policyNote:
+        'Lawyer starts the follow-up, or later asks for the sheriff delivery. '
+        'The sheriff trip is not started when documents are logged back.',
+  ),
+  Transition(
+    from: Status.awaitingInstruction,
+    to: Status.completed,
+    flows: {RequestFlow.litigation},
+    actors: {ActorRole.lawyer, ActorRole.system},
+    timestampField: 'completedAt',
+    precondition: _isIssuingWorkflow,
+    preconditionDescription: 'request must be an issuing workflow order',
+    notifies: {ActorRole.lawyer, ActorRole.secretary, ActorRole.officeAdmin},
+    policyNote:
+        'Lawyer marks the order complete after documents are back, or the '
+        'system closes it when the sheriff trip has been delivered.',
+  ),
 ];
 
 /// Terminal states: no outgoing transitions, ever.
@@ -668,3 +761,5 @@ bool _hasDriver(StatefulRequest subject) {
 
 bool _isCourtAppearanceRequest(StatefulRequest subject) =>
     subject.actionType == ActionType.courtAppearance;
+
+bool _isIssuingWorkflow(StatefulRequest subject) => subject.issuingWorkflow;

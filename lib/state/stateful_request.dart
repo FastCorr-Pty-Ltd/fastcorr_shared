@@ -37,4 +37,8 @@ abstract class StatefulRequest {
   /// Litigation: [ActionType] for request-specific rules (e.g. court appearance
   /// completion without a driver leg). Always null for messenger orders.
   ActionType? get actionType;
+
+  /// True only for issuing parents created with the multi-step workflow.
+  /// Messenger orders and older litigation requests stay false.
+  bool get issuingWorkflow => false;
 }

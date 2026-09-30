@@ -33,4 +33,7 @@ class OrderModelState implements StatefulRequest {
 
   @override
   ActionType? get actionType => null;
+
+  @override
+  bool get issuingWorkflow => false;
 }
